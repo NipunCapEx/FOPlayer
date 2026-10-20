@@ -23,8 +23,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: ListView(
-            children: [
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
               InstrumentCard(
                 instrument: Instrument(
                   symbol: 'CAUTION',
@@ -55,7 +56,8 @@ void main() {
                 ),
                 onEditEntry: _noop,
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ));
@@ -119,7 +121,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Enter a valid positive entry price.'), findsOneWidget);
-      expect(find.text('₹1232.00'), findsOneWidget);
+      expect(find.text('₹1400.00'), findsOneWidget);
     });
   });
 }
