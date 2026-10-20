@@ -178,8 +178,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('FOPlayer'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
+          const Padding(
+            padding: EdgeInsets.only(right: 16),
             child: Center(
               child: Chip(
                 avatar: const Icon(Icons.science_outlined, size: 18),
