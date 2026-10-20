@@ -125,7 +125,7 @@ function readSpecialSessions(
   const sessions: Record<string, MarketSession> = {};
   for (const [date, value] of Object.entries(parsed)) {
     if (
-      !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
       typeof value !== 'object' ||
       value === null ||
       Array.isArray(value)
