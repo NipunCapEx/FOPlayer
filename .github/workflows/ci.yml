@@ -63,7 +63,7 @@ jobs:
           fi
           echo "Prettier's suggested patch follows. This diagnostic does not make the check pass."
           npx prettier --write "src/**/*.ts" "test/**/*.ts" "vitest.config.ts" "tsconfig.json" "package.json"
-          git --no-pager diff -- src test
+          git --no-pager diff -- src test tsconfig.json
           exit 1
       - name: Typecheck and build
         run: npm run build
