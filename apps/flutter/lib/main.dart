@@ -113,6 +113,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
   }
 
+  static const _supportedSymbols = <String, String>{
+    'RELIANCE': 'Reliance Industries',
+    'JSWSTEEL': 'JSW Steel',
+    'BHARTIARTL': 'Bharti Airtel',
+    'SBICARD': 'SBI Cards',
+    'TCS': 'Tata Consultancy Services',
+    'INFY': 'Infosys',
+    'HDFCBANK': 'HDFC Bank',
+    'ICICIBANK': 'ICICI Bank',
+  };
+
+  Future<void> _addInstrument() async {
+    final available = _supportedSymbols.keys
+        .where((symbol) => !instruments.any((item) => item.symbol == symbol))
+        .toList();
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All supported demo symbols are already added.'),
+        ),
+      );
+      return;
+    }
+    final result = await showDialog<Instrument>(
+      context: context,
+      builder: (dialogContext) => AddInstrumentDialog(
+        symbols: available,
+        names: _supportedSymbols,
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() => instruments = [...instruments, result]);
+  }
+
+  void _removeInstrument(Instrument instrument) {
+    setState(() {
+      instruments = instruments
+          .where((item) => item.symbol != instrument.symbol)
+          .toList();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${instrument.symbol} removed from this dashboard.'),
+      ),
+    );
+  }
+
   Future<void> _editEntry(Instrument instrument) async {
     final newEntry = await showDialog<double>(
       context: context,
@@ -139,7 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('FOPlayer'),
+        title: const Text('FnO Players'),
         actions: [
           const Padding(
             padding: EdgeInsets.only(right: 16),
@@ -212,6 +259,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Your watchlist',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    FilledButton.icon(
+                      key: const Key('add-instrument-button'),
+                      onPressed: _addInstrument,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add symbol'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (instruments.isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'Your watchlist is empty. Add a symbol to get started.',
+                      ),
+                    ),
+                  ),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final columns = constraints.maxWidth >= 850
@@ -231,6 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: InstrumentCard(
                               instrument: instrument,
                               onEditEntry: () => _editEntry(instrument),
+                              onRemove: () => _removeInstrument(instrument),
                             ),
                           ),
                       ],
@@ -272,6 +346,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class AddInstrumentDialog extends StatefulWidget {
+  const AddInstrumentDialog({
+    required this.symbols,
+    required this.names,
+    super.key,
+  });
+
+  final List<String> symbols;
+  final Map<String, String> names;
+
+  @override
+  State<AddInstrumentDialog> createState() => _AddInstrumentDialogState();
+}
+
+class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
+  late String symbol;
+  late final TextEditingController entryController;
+
+  @override
+  void initState() {
+    super.initState();
+    symbol = widget.symbols.first;
+    entryController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    entryController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final entry = double.tryParse(entryController.text.trim());
+    if (entry == null || !entry.isFinite || entry <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid positive entry price.')),
+      );
+      return;
+    }
+    final now = DateTime.now();
+    Navigator.of(context).pop(
+      Instrument(
+        symbol: symbol,
+        name: widget.names[symbol]!,
+        entryPrice: entry,
+        // Until a live provider is configured, do not fabricate a market quote.
+        spotPrice: entry,
+        lastUpdated: now,
+        isStale: true,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add watchlist symbol'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String>(
+            key: const Key('new-symbol-dropdown'),
+            initialValue: symbol,
+            decoration: const InputDecoration(labelText: 'Symbol'),
+            items: [
+              for (final item in widget.symbols)
+                DropdownMenuItem(value: item, child: Text(item)),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => symbol = value);
+            },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('new-entry-price-input'),
+            controller: entryController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Entry price (₹)',
+              hintText: 'Enter your entry price',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('save-new-symbol-button'),
+          onPressed: _save,
+          child: const Text('Add symbol'),
+        ),
+      ],
     );
   }
 }
@@ -387,11 +560,13 @@ class InstrumentCard extends StatelessWidget {
   const InstrumentCard({
     required this.instrument,
     required this.onEditEntry,
+    this.onRemove,
     super.key,
   });
 
   final Instrument instrument;
   final VoidCallback onEditEntry;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -508,13 +683,22 @@ class InstrumentCard extends StatelessWidget {
                 'Snapshot time: $snapshotTime',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: onEditEntry,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Edit entry'),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (onRemove != null)
+                  IconButton(
+                    key: Key('remove-${instrument.symbol}'),
+                    tooltip: 'Remove ${instrument.symbol}',
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                TextButton.icon(
+                  onPressed: onEditEntry,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit entry'),
+                ),
+              ],
             ),
           ],
         ),

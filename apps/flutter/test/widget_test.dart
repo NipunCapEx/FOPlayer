@@ -127,6 +127,56 @@ void main() {
       expect(find.text('Enter a valid positive entry price.'), findsOneWidget);
       expect(find.text('₹1400.00'), findsOneWidget);
     });
+
+    testWidgets('adds a supported symbol with a positive entry price',
+        (tester) async {
+      await tester.pumpWidget(const FOPlayerApp());
+      await tester.tap(find.byKey(const Key('add-instrument-button')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('new-entry-price-input')),
+        '1234.5',
+      );
+      await tester.tap(find.byKey(const Key('save-new-symbol-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('TCS'), findsOneWidget);
+      expect(find.textContaining('DEMO DATA'), findsOneWidget);
+    });
+
+    testWidgets('rejects invalid entry when adding a symbol', (tester) async {
+      await tester.pumpWidget(const FOPlayerApp());
+      await tester.tap(find.byKey(const Key('add-instrument-button')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+          find.byKey(const Key('new-entry-price-input')), '0');
+      await tester.tap(find.byKey(const Key('save-new-symbol-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter a valid positive entry price.'), findsOneWidget);
+      expect(find.byKey(const Key('new-entry-price-input')), findsOneWidget);
+    });
+
+    testWidgets('removes a symbol from the active watchlist', (tester) async {
+      await tester.pumpWidget(const FOPlayerApp());
+      final removeButton = find.byKey(const Key('remove-RELIANCE'));
+      await tester.scrollUntilVisible(
+        removeButton,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(removeButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('RELIANCE'), findsNothing);
+      expect(
+        find.text('RELIANCE removed from this dashboard.'),
+        findsOneWidget,
+      );
+    });
   });
 }
 
