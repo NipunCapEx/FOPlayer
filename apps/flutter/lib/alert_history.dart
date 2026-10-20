@@ -89,8 +89,7 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
                         key: const Key('alert-history-list'),
                         padding: const EdgeInsets.all(16),
                         itemCount: _alerts.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 10),
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (context, index) =>
                             _AlertHistoryCard(alert: _alerts[index]),
                       ),
