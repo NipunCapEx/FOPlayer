@@ -336,10 +336,29 @@ export class RiskMonitor {
   }
 }
 
-export function isIndianEquityMarketOpen(now: Date): boolean {
+export interface MarketSession {
+  open: string;
+  close: string;
+}
+
+export interface MarketHoursPolicy {
+  openingTime?: string;
+  closingTime?: string;
+  holidays?: readonly string[];
+  specialSessions?: Readonly<Record<string, MarketSession>>;
+}
+
+export function isIndianEquityMarketOpen(
+  now: Date,
+  policy: MarketHoursPolicy = {},
+): boolean {
+  if (!Number.isFinite(now.getTime())) return false;
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Kolkata',
     weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
@@ -347,14 +366,38 @@ export function isIndianEquityMarketOpen(now: Date): boolean {
   const values = Object.fromEntries(
     parts.map((part) => [part.type, part.value]),
   );
-  const weekday = values.weekday;
-  if (weekday === 'Sat' || weekday === 'Sun') return false;
+  const dateKey = `${values.year}-${values.month}-${values.day}`;
+  const specialSession = policy.specialSessions?.[dateKey];
+  if (!specialSession) {
+    if (values.weekday === 'Sat' || values.weekday === 'Sun') return false;
+    if (policy.holidays?.includes(dateKey)) return false;
+  }
 
+  const openingTime = specialSession?.open ?? policy.openingTime ?? '09:15';
+  const closingTime = specialSession?.close ?? policy.closingTime ?? '15:30';
+  const openingMinutes = parseMarketClock(openingTime);
+  const closingMinutes = parseMarketClock(closingTime);
+  if (
+    openingMinutes === null ||
+    closingMinutes === null ||
+    openingMinutes > closingMinutes
+  ) {
+    return false;
+  }
   const hour = Number(values.hour);
   const minute = Number(values.minute);
   if (!Number.isFinite(hour) || !Number.isFinite(minute)) return false;
   const localMinutes = hour * 60 + minute;
-  return localMinutes >= 9 * 60 + 15 && localMinutes <= 15 * 60 + 30;
+  return localMinutes >= openingMinutes && localMinutes <= closingMinutes;
+}
+
+function parseMarketClock(value: string): number | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return null;
+  return hour * 60 + minute;
 }
 
 export interface PollingWorkerOptions {
