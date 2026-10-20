@@ -345,7 +345,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ..addEntries(saved.map((item) => MapEntry(item.symbol, item.id)));
         instruments = saved.map((item) {
           final fixture = fixtures[item.symbol];
-          if (fixture == null)
+          if (fixture == null) {
             return Instrument(
               symbol: item.symbol,
               name: _supportedSymbols[item.symbol] ?? item.symbol,
@@ -358,10 +358,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }).toList();
       });
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not load saved watchlist: $error')),
         );
+      }
     }
   }
 
@@ -422,10 +423,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await widget.apiClient!.updateStrategy(id, active: false);
       }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not remove symbol: $error')),
         );
+      }
       return;
     }
     if (!mounted) return;
@@ -454,10 +456,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await widget.apiClient!.updateStrategy(id, entryPrice: newEntry);
       }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not save entry price: $error')),
         );
+      }
       return;
     }
     if (!mounted) return;
