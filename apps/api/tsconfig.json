@@ -14,17 +14,15 @@
     "declaration": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": [
-      "node",
-    ]
+    "types": ["node"]
   },
   "include": [
     "src/**/*.ts",
     "test/**/*.ts",
-    "vitest.config.ts",
+    "vitest.config.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
+    "dist"
   ]
 }
