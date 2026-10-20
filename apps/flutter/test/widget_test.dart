@@ -150,7 +150,8 @@ void main() {
       await tester.tap(find.byKey(const Key('add-instrument-button')));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byKey(const Key('new-entry-price-input')), '0');
+      await tester.enterText(
+          find.byKey(const Key('new-entry-price-input')), '0');
       await tester.tap(find.byKey(const Key('save-new-symbol-button')));
       await tester.pumpAndSettle();
 
