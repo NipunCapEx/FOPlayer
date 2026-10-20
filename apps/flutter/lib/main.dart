@@ -84,22 +84,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Instrument(
         symbol: 'RELIANCE',
         name: 'Reliance Industries',
-        entryPrice: 1_400,
-        spotPrice: 1_512,
+        entryPrice: 1400,
+        spotPrice: 1512,
         lastUpdated: now,
       ),
       Instrument(
         symbol: 'JSWSTEEL',
         name: 'JSW Steel',
-        entryPrice: 1_100,
-        spotPrice: 1_018,
+        entryPrice: 1100,
+        spotPrice: 1018,
         lastUpdated: now,
       ),
       Instrument(
         symbol: 'BHARTIARTL',
         name: 'Bharti Airtel',
-        entryPrice: 1_600,
-        spotPrice: 1_680,
+        entryPrice: 1600,
+        spotPrice: 1680,
         lastUpdated: now,
       ),
       Instrument(
