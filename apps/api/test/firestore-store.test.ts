@@ -286,7 +286,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
         exchangeTimestamp: new Date('2026-10-20T10:00:00Z'),
         fetchedAt: new Date('2026-10-20T10:00:01Z'),
         recordedAt: new Date('2026-10-20T10:00:02Z'),
-    });
+      });;
     await db
       .collection('strategySnapshots')
       .doc(secondOwn.id)
@@ -296,7 +296,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
         exchangeTimestamp: '2026-10-20T10:00:00Z',
         fetchedAt: { toDate: () => new Date('2026-10-20T10:00:01Z') },
         recordedAt: 'not-a-date',
-    });
+      });;
     await db
       .collection('alerts')
       .doc('own-alert')
@@ -304,7 +304,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
         ownerUid: 'owner-a',
         createdAt: new Date('2026-10-20T10:00:00Z'),
         kind: 'caution',
-    });
+      });;
     await db
       .collection('alerts')
       .doc('foreign-alert')
@@ -312,7 +312,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
         ownerUid: 'owner-b',
         createdAt: new Date('2026-10-20T10:01:00Z'),
         kind: 'critical',
-    });
+      });;
 
     const dashboard = await strategies.getDashboard('owner-a');
     expect(dashboard.strategies).toHaveLength(2);
