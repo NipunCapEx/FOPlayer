@@ -45,6 +45,18 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Generate Android project with the production application ID
+        run: |
+          set -euo pipefail
+          if [ ! -f android/app/build.gradle.kts ] && [ ! -f android/app/build.gradle ]; then
+            flutter create --platforms=android --org com.nipun.finance --project-name fno .
+          fi
+          sed -i 's/android:label="[^"]*"/android:label="FnO Players"/' android/app/src/main/AndroidManifest.xml
+          grep -q 'com.nipun.finance.fno' android/app/build.gradle.kts android/app/build.gradle 2>/dev/null || {
+            echo "::error::Generated Android application ID is not com.nipun.finance.fno"
+            exit 1
+          }
+
       - name: Validate required release configuration
         env:
           FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
