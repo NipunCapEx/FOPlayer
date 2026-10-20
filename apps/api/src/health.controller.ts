@@ -10,7 +10,7 @@ export class HealthController {
     return {
       status: 'ok',
       service: 'foplayer-api',
-      firebaseConfigured: this.firebase.isConfigured,
+      firebaseConfigured: this.firebase?.isConfigured ?? false,
       marketDataAdapter: 'yahoo-finance-prototype',
       telegramConfigured: Boolean(
         process.env.TELEGRAM_BOT_TOKEN &&
@@ -20,7 +20,7 @@ export class HealthController {
             .map((uid) => uid.trim())
             .filter(Boolean).length === 1,
       ),
-      androidPushConfigured: this.firebase.isConfigured,
+      androidPushConfigured: this.firebase?.isConfigured ?? false,
     };
   }
 }
