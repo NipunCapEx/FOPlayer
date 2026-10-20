@@ -683,13 +683,22 @@ class InstrumentCard extends StatelessWidget {
                 'Snapshot time: $snapshotTime',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: onEditEntry,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Edit entry'),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (onRemove != null)
+                  IconButton(
+                    key: Key('remove-${instrument.symbol}'),
+                    tooltip: 'Remove ${instrument.symbol}',
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                TextButton.icon(
+                  onPressed: onEditEntry,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit entry'),
+                ),
+              ],
             ),
           ],
         ),
