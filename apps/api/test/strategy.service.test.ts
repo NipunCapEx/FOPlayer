@@ -66,7 +66,10 @@ describe('StrategyService', () => {
   it('validates update fields and rejects an empty patch', async () => {
     const { service, store } = createService();
     await expect(
-      service.update('owner-1', 'strategy-1', { entryPrice: 1500, active: false }),
+      service.update('owner-1', 'strategy-1', {
+        entryPrice: 1500,
+        active: false,
+      }),
     ).resolves.toMatchObject({ entryPrice: 1500, active: false });
     await expect(
       service.update('owner-1', 'strategy-1', { entryPrice: 0 }),
