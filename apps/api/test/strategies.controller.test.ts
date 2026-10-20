@@ -8,18 +8,23 @@ function createController() {
   const service = {
     dashboard: vi.fn(async (uid: string) => ({ ownerUid: uid })),
     list: vi.fn(async (uid: string) => [{ ownerUid: uid }]),
-    create: vi.fn(async (uid: string, body: unknown) => ({ ownerUid: uid, body })),
+    create: vi.fn(async (uid: string, body: unknown) => ({
+      ownerUid: uid,
+      body,
+    })),
     update: vi.fn(async (uid: string, id: string, body: unknown) => ({
       ownerUid: uid,
       id,
       body,
     })),
     alerts: vi.fn(async (uid: string) => [{ ownerUid: uid }]),
-    registerDevice: vi.fn(async (uid: string, strategyId: unknown, token: unknown) => ({
-      uid,
-      strategyId,
-      token,
-    })),
+    registerDevice: vi.fn(
+      async (uid: string, strategyId: unknown, token: unknown) => ({
+        uid,
+        strategyId,
+        token,
+      }),
+    ),
   };
   return {
     controller: new StrategiesController(service as unknown as StrategyService),
@@ -53,15 +58,15 @@ describe('StrategiesController', () => {
   it('rejects non-object request bodies', async () => {
     const { controller, service } = createController();
 
-    await expect(controller.createStrategy(request, null)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      controller.createStrategy(request, null),
+    ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       controller.updateStrategy(request, 'strategy-1', []),
     ).rejects.toBeInstanceOf(BadRequestException);
-    await expect(controller.registerDevice(request, null)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      controller.registerDevice(request, null),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(service.create).not.toHaveBeenCalled();
     expect(service.update).not.toHaveBeenCalled();
   });
