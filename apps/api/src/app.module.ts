@@ -113,7 +113,6 @@ export const ALERT_DISPATCHER = Symbol('ALERT_DISPATCHER');
 })
 export class AppModule {}
 
-
 function readSpecialSessions(
   raw: string | undefined,
 ): Record<string, MarketSession> {
