@@ -191,10 +191,12 @@ class UserDashboard {
   const UserDashboard({
     required this.strategies,
     required this.snapshots,
+    required this.hasAnyStrategies,
   });
 
   final List<UserStrategy> strategies;
   final Map<String, DashboardSnapshot> snapshots;
+  final bool hasAnyStrategies;
 
   factory UserDashboard.fromJson(Map<String, dynamic> json) {
     final rawStrategies = json['strategies'];
@@ -202,6 +204,7 @@ class UserDashboard {
     if (rawStrategies is! List || rawSnapshots is! List) {
       throw const FormatException('Invalid dashboard response.');
     }
+    final hasAnyStrategies = rawStrategies.isNotEmpty;
     final strategies = rawStrategies.map((value) {
       if (value is! Map<String, dynamic>) {
         throw const FormatException('Invalid dashboard strategy.');
@@ -216,7 +219,11 @@ class UserDashboard {
       final snapshot = DashboardSnapshot.fromJson(value);
       snapshots[snapshot.strategyId] = snapshot;
     }
-    return UserDashboard(strategies: strategies, snapshots: snapshots);
+    return UserDashboard(
+      strategies: strategies,
+      snapshots: snapshots,
+      hasAnyStrategies: hasAnyStrategies,
+    );
   }
 }
 
