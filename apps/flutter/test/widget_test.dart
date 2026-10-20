@@ -128,9 +128,8 @@ void main() {
       expect(find.text('₹1400.00'), findsOneWidget);
     });
 
-    testWidgets(
-      'adds a supported symbol with a positive entry price',
-      (tester) async {
+    testWidgets('adds a supported symbol with a positive entry price',
+        (tester) async {
       await tester.pumpWidget(const FOPlayerApp());
       await tester.tap(find.byKey(const Key('add-instrument-button')));
       await tester.pumpAndSettle();
