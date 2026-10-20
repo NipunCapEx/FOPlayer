@@ -325,7 +325,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
   });
 
   it('registers device tokens only for strategies owned by the caller', async () => {
-    const { strategies } = createStores();
+    const { db, strategies } = createStores();
     const strategy = await strategies.createForOwner('owner-a', {
       symbol: 'RELIANCE',
       entryPrice: 1000,
