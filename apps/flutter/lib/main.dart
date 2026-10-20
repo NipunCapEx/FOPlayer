@@ -322,6 +322,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _dashboardLoading = false;
   String? _dashboardError;
   Timer? _freshnessTimer;
+  Timer? _snapshotRefreshTimer;
 
   @override
   void initState() {
@@ -367,6 +368,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const Duration(minutes: 1),
         (_) => _refreshSnapshotFreshness(),
       );
+      // Re-fetch server-validated market data periodically; freshness checks
+      // alone would only mark a snapshot stale without ever updating it.
+      _snapshotRefreshTimer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) {
+          if (mounted && !_dashboardLoading) {
+            _loadPersistedWatchlist();
+          }
+        },
+      );
       _loadPersistedWatchlist();
     }
   }
@@ -374,6 +385,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _freshnessTimer?.cancel();
+    _snapshotRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -391,7 +403,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadPersistedWatchlist() async {
     final apiClient = widget.apiClient;
-    if (apiClient == null) return;
+    if (apiClient == null || _dashboardLoading) return;
     setState(() {
       _dashboardLoading = true;
       _dashboardError = null;
