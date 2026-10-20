@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [master]
   push:
-    branches: ['**']
+    branches: [master, main]
   workflow_dispatch:
     inputs:
       scope:
@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -56,7 +56,15 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - name: Formatting check
-        run: npm run format:check
+        shell: bash
+        run: |
+          if npm run format:check; then
+            exit 0
+          fi
+          echo "Prettier's suggested patch follows. This diagnostic does not make the check pass."
+          npx prettier --write "src/**/*.ts" "test/**/*.ts" "vitest.config.ts" "tsconfig.json" "package.json"
+          git --no-pager diff -- src test
+          exit 1
       - name: Typecheck and build
         run: npm run build
       - name: Unit tests with coverage

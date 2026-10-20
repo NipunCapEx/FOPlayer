@@ -1,0 +1,398 @@
+import {
+  assessRisk,
+  type RiskAssessment,
+  type SupportedSymbol,
+} from './risk-engine.js';
+import type { MarketDataProvider, MarketSnapshot } from './market-data.js';
+import { validateSnapshot, DEFAULT_FRESHNESS_POLICY } from './market-data.js';
+
+export interface Strategy {
+  id: string;
+  symbol: SupportedSymbol;
+  entryPrice: number;
+  active: boolean;
+}
+
+export type AlertKind =
+  | 'caution'
+  | 'critical'
+  | 'breached'
+  | 'volatility-warning'
+  | 'daily-move';
+
+export interface RiskAlert {
+  idempotencyKey: string;
+  strategyId: string;
+  symbol: SupportedSymbol;
+  kind: AlertKind;
+  message: string;
+  price: number;
+  movementPercent: number;
+  createdAt: Date;
+}
+
+export interface AlertDispatcher {
+  dispatch(alert: RiskAlert): Promise<void>;
+}
+
+export interface RiskEpisodeState {
+  episode: number;
+  highestSeverity: number;
+}
+
+export interface MonitoringRepository {
+  listActiveStrategies(): Promise<Strategy[]>;
+  recordAssessment(
+    strategyId: string,
+    assessment: RiskAssessment,
+    snapshot: MarketSnapshot,
+  ): Promise<void>;
+  getRiskEpisodeState(strategyId: string): Promise<RiskEpisodeState | null>;
+  saveRiskEpisodeState(
+    strategyId: string,
+    state: RiskEpisodeState,
+  ): Promise<void>;
+  recordUnavailable(
+    symbol: SupportedSymbol,
+    reason: string,
+    checkedAt: Date,
+  ): Promise<void>;
+  hasDeliveredOrQueuedAlert(idempotencyKey: string): Promise<boolean>;
+  enqueueAlert(alert: RiskAlert): Promise<void>;
+  listPendingAlerts(): Promise<RiskAlert[]>;
+  markAlertDelivered(idempotencyKey: string, deliveredAt: Date): Promise<void>;
+  recordAlertDeliveryFailure(
+    idempotencyKey: string,
+    reason: string,
+    failedAt: Date,
+  ): Promise<void>;
+}
+
+export interface MonitorOptions {
+  now?: () => Date;
+  maxSnapshotAgeMs?: number;
+  minimumHistoryCloses?: number;
+  dailyMoveThresholdPercent?: number;
+}
+
+const severity = { normal: 0, caution: 1, critical: 2, breached: 3 } as const;
+
+export class RiskMonitor {
+  private readonly riskEpisodeCache = new Map<string, RiskEpisodeState>();
+  private readonly emittedNonRiskSignals = new Set<string>();
+  private readonly now: () => Date;
+  private readonly maxSnapshotAgeMs: number;
+  private readonly minimumHistoryCloses: number;
+  private readonly dailyMoveThresholdPercent: number;
+
+  constructor(
+    private readonly provider: MarketDataProvider,
+    private readonly repository: MonitoringRepository,
+    private readonly dispatcher: AlertDispatcher,
+    options: MonitorOptions = {},
+  ) {
+    this.now = options.now ?? (() => new Date());
+    this.maxSnapshotAgeMs =
+      options.maxSnapshotAgeMs ?? DEFAULT_FRESHNESS_POLICY.maxAgeMs;
+    this.minimumHistoryCloses = options.minimumHistoryCloses ?? 6;
+    this.dailyMoveThresholdPercent = options.dailyMoveThresholdPercent ?? 2.5;
+  }
+
+  async runOnce(): Promise<void> {
+    const strategies = (await this.repository.listActiveStrategies()).filter(
+      (s) => s.active,
+    );
+    const symbols = [...new Set(strategies.map((s) => s.symbol))];
+
+    for (const symbol of symbols) {
+      const checkedAt = this.now();
+      let snapshot: MarketSnapshot;
+      try {
+        snapshot = await this.provider.getSnapshot(symbol);
+      } catch {
+        await this.repository.recordUnavailable(
+          symbol,
+          'market data provider failed',
+          checkedAt,
+        );
+        continue;
+      }
+
+      const validation = validateSnapshot(snapshot, checkedAt, {
+        maxAgeMs: this.maxSnapshotAgeMs,
+        maxFutureSkewMs: DEFAULT_FRESHNESS_POLICY.maxFutureSkewMs,
+      });
+      if (!validation.valid) {
+        await this.repository.recordUnavailable(
+          symbol,
+          validation.reason,
+          checkedAt,
+        );
+        continue;
+      }
+
+      const symbolStrategies = strategies.filter(
+        (strategy) => strategy.symbol === symbol,
+      );
+      for (const strategy of symbolStrategies) {
+        let assessment: RiskAssessment;
+        try {
+          assessment = assessRisk({
+            symbol,
+            entryPrice: strategy.entryPrice,
+            spotPrice: snapshot.price,
+          });
+        } catch {
+          await this.repository.recordUnavailable(
+            symbol,
+            'strategy entry is invalid',
+            checkedAt,
+          );
+          continue;
+        }
+        await this.repository.recordAssessment(
+          strategy.id,
+          assessment,
+          snapshot,
+        );
+        await this.evaluateRiskAlert(strategy, assessment, checkedAt);
+        await this.evaluateVolatility(
+          strategy,
+          snapshot,
+          assessment,
+          checkedAt,
+        );
+        await this.evaluateDailyMove(strategy, snapshot, checkedAt);
+      }
+    }
+    await this.flushPendingAlerts();
+  }
+
+  private async flushPendingAlerts(): Promise<void> {
+    const pending = await this.repository.listPendingAlerts();
+    for (const alert of pending) {
+      try {
+        await this.dispatcher.dispatch(alert);
+        await this.repository.markAlertDelivered(
+          alert.idempotencyKey,
+          this.now(),
+        );
+      } catch (error) {
+        const reason =
+          error instanceof Error ? error.message : 'unknown delivery error';
+        await this.repository.recordAlertDeliveryFailure(
+          alert.idempotencyKey,
+          reason,
+          this.now(),
+        );
+      }
+    }
+  }
+
+  private async evaluateRiskAlert(
+    strategy: Strategy,
+    assessment: RiskAssessment,
+    now: Date,
+  ): Promise<void> {
+    const state = await this.getRiskEpisodeState(strategy.id);
+    const level = severity[assessment.level];
+
+    if (level === 0) {
+      if (state.highestSeverity > 0) {
+        const recovered = {
+          episode: state.episode + 1,
+          highestSeverity: 0,
+        };
+        await this.repository.saveRiskEpisodeState(strategy.id, recovered);
+        this.riskEpisodeCache.set(strategy.id, recovered);
+      }
+      return;
+    }
+    if (level <= state.highestSeverity) return;
+
+    const kind = assessment.level as Extract<
+      AlertKind,
+      'caution' | 'critical' | 'breached'
+    >;
+    await this.queueAlert({
+      idempotencyKey: `risk:${strategy.id}:episode-${state.episode}:${kind}`,
+      strategyId: strategy.id,
+      symbol: strategy.symbol,
+      kind,
+      message:
+        `${strategy.symbol} ${kind}: movement ` +
+        `${assessment.movementPercent.toFixed(2)}% from entry.`,
+      price: assessment.spotPrice,
+      movementPercent: assessment.movementPercent,
+      createdAt: now,
+    });
+
+    const nextState = { ...state, highestSeverity: level };
+    await this.repository.saveRiskEpisodeState(strategy.id, nextState);
+    this.riskEpisodeCache.set(strategy.id, nextState);
+  }
+
+  private async getRiskEpisodeState(
+    strategyId: string,
+  ): Promise<RiskEpisodeState> {
+    const cached = this.riskEpisodeCache.get(strategyId);
+    if (cached) return cached;
+    const persisted = await this.repository.getRiskEpisodeState(strategyId);
+    const state = persisted ?? { episode: 1, highestSeverity: 0 };
+    this.riskEpisodeCache.set(strategyId, state);
+    return state;
+  }
+
+  private async evaluateVolatility(
+    strategy: Strategy,
+    snapshot: MarketSnapshot,
+    assessment: RiskAssessment,
+    now: Date,
+  ): Promise<void> {
+    const closes = snapshot.historicalCloses;
+    if (closes.length < this.minimumHistoryCloses) return;
+
+    const returns: number[] = [];
+    for (let i = 1; i < closes.length; i += 1) {
+      const previous = closes[i - 1]!;
+      const current = closes[i]!;
+      returns.push((current - previous) / previous);
+    }
+    if (returns.length < this.minimumHistoryCloses - 1) return;
+
+    const mean =
+      returns.reduce((sum, value) => sum + value, 0) / returns.length;
+    const variance =
+      returns.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
+      (returns.length - 1);
+    const dailyStdDev = Math.sqrt(variance);
+    if (!Number.isFinite(dailyStdDev) || dailyStdDev <= 0) return;
+
+    const projectedLow = snapshot.price * (1 - dailyStdDev);
+    const projectedHigh = snapshot.price * (1 + dailyStdDev);
+    const intersectsBoundary =
+      projectedLow <= assessment.lowerBoundary ||
+      projectedHigh >= assessment.upperBoundary;
+    const signalKey = `volatility:${strategy.id}:${now.toISOString().slice(0, 10)}`;
+    if (!intersectsBoundary || this.emittedNonRiskSignals.has(signalKey)) {
+      return;
+    }
+    await this.queueAlert({
+      idempotencyKey: signalKey,
+      strategyId: strategy.id,
+      symbol: strategy.symbol,
+      kind: 'volatility-warning',
+      message:
+        `${strategy.symbol}: historical one-standard-deviation daily move ` +
+        'may intersect a ±12% boundary.',
+      price: snapshot.price,
+      movementPercent: assessment.movementPercent,
+      createdAt: now,
+    });
+    this.emittedNonRiskSignals.add(signalKey);
+  }
+
+  private async evaluateDailyMove(
+    strategy: Strategy,
+    snapshot: MarketSnapshot,
+    now: Date,
+  ): Promise<void> {
+    const movement =
+      ((snapshot.price - snapshot.previousClose) / snapshot.previousClose) *
+      100;
+    if (Math.abs(movement) < this.dailyMoveThresholdPercent) return;
+    const direction = movement >= 0 ? 'up' : 'down';
+    const signalKey = [
+      'daily-move',
+      strategy.id,
+      now.toISOString().slice(0, 10),
+      direction,
+    ].join(':');
+    if (this.emittedNonRiskSignals.has(signalKey)) return;
+    await this.queueAlert({
+      idempotencyKey: signalKey,
+      strategyId: strategy.id,
+      symbol: strategy.symbol,
+      kind: 'daily-move',
+      message:
+        `${strategy.symbol}: daily move ${movement.toFixed(2)}% exceeds ` +
+        `the configured ±${this.dailyMoveThresholdPercent}% signal ` +
+        'threshold; ' +
+        'this is not a trade recommendation.',
+      price: snapshot.price,
+      movementPercent: movement,
+      createdAt: now,
+    });
+    this.emittedNonRiskSignals.add(signalKey);
+  }
+
+  private async queueAlert(alert: RiskAlert): Promise<void> {
+    if (await this.repository.hasDeliveredOrQueuedAlert(alert.idempotencyKey)) {
+      return;
+    }
+    await this.repository.enqueueAlert(alert);
+  }
+}
+
+export function isIndianEquityMarketOpen(now: Date): boolean {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+  const weekday = values.weekday;
+  if (weekday === 'Sat' || weekday === 'Sun') return false;
+
+  const hour = Number(values.hour);
+  const minute = Number(values.minute);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return false;
+  const localMinutes = hour * 60 + minute;
+  return localMinutes >= 9 * 60 + 15 && localMinutes <= 15 * 60 + 30;
+}
+
+export interface PollingWorkerOptions {
+  intervalMs?: number;
+  isMonitoringWindow?: (now: Date) => boolean;
+  now?: () => Date;
+}
+
+export class PollingWorker {
+  private timer: ReturnType<typeof setInterval> | undefined;
+  private running = false;
+
+  constructor(
+    private readonly monitor: RiskMonitor,
+    private readonly options: PollingWorkerOptions = {},
+  ) {}
+
+  start(): void {
+    if (this.timer) return;
+    const intervalMs = this.options.intervalMs ?? 5 * 60 * 1000;
+    this.timer = setInterval(() => {
+      void this.tick();
+    }, intervalMs);
+  }
+
+  async tick(): Promise<void> {
+    if (this.running) return;
+    const now = this.options.now?.() ?? new Date();
+    const isOpen = this.options.isMonitoringWindow ?? isIndianEquityMarketOpen;
+    if (!isOpen(now)) return;
+    this.running = true;
+    try {
+      await this.monitor.runOnce();
+    } finally {
+      this.running = false;
+    }
+  }
+
+  stop(): void {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = undefined;
+  }
+}
