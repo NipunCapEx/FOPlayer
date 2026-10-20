@@ -273,7 +273,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             width: cardWidth,
                             child: InstrumentCard(
                               instrument: instrument,
-                              onEditEntry: () => _editEntry(instrument),\n                              onRemove: () => _removeInstrument(instrument),
+                              onEditEntry: () => _editEntry(instrument),
+                              onRemove: () => _removeInstrument(instrument),
                             ),
                           ),
                       ],
@@ -418,7 +419,8 @@ class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
     );
   }
 }
-\nclass EntryPriceDialog extends StatefulWidget {
+
+class EntryPriceDialog extends StatefulWidget {
   const EntryPriceDialog({required this.instrument, super.key});
 
   final Instrument instrument;
