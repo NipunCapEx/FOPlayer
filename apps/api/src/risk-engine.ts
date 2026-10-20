@@ -59,7 +59,8 @@ export function assessRisk(input: RiskInput): RiskAssessment {
 
   // Structural breach has precedence over the percentage-based warning levels.
   let level: RiskLevel = 'normal';
-  if (spotPrice <= lowerBoundary || spotPrice >= upperBoundary) {
+  if (Math.abs(movementPercent) >= 12) {
+    // Compare the percentage at the exact threshold to avoid float drift in E * 1.12.
     level = 'breached';
   } else if (Math.abs(movementPercent) >= 10) {
     level = 'critical';
