@@ -64,39 +64,67 @@ jobs:
 
   frontend:
     name: Flutter - analyze, tests and web build
-    if: ${{ (github.event_name != 'workflow_dispatch' || inputs.scope == 'full' || inputs.scope == 'frontend') && hashFiles('apps/flutter/pubspec.yaml') != '' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.scope == 'full' || inputs.scope == 'frontend' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check whether Flutter app exists
+        id: flutter
+        shell: bash
+        run: |
+          if [ -f apps/flutter/pubspec.yaml ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Flutter app not introduced yet; frontend checks are not applicable."
+          fi
       - uses: subosito/flutter-action@v2
+        if: steps.flutter.outputs.available == 'true'
         with:
           channel: stable
           cache: true
       - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
         run: flutter pub get
       - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
         run: dart format --output=none --set-exit-if-changed .
       - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
         run: flutter analyze
       - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
         run: flutter test --coverage
       - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
         run: flutter build web --release
 
   android-release-build:
     name: Android release build (manual)
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.scope == 'full' || inputs.scope == 'android') && hashFiles('apps/flutter/pubspec.yaml') != '' }}
-    needs: [frontend]
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.scope == 'full' || inputs.scope == 'android') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check whether Flutter app exists
+        id: flutter
+        shell: bash
+        run: |
+          if [ -f apps/flutter/pubspec.yaml ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Flutter app not introduced yet; Android release build is not applicable."
+          fi
       - uses: subosito/flutter-action@v2
+        if: steps.flutter.outputs.available == 'true'
         with:
           channel: stable
           cache: true
       - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
         run: flutter pub get
       - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
         run: flutter build apk --release
 
   status:
