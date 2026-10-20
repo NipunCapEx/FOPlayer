@@ -1,0 +1,147 @@
+name: Android Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the signed App Bundle to Google Play internal testing
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foplayer-android-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build signed APK and Play Store App Bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/flutter
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Validate required release configuration
+        env:
+          FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
+          ANDROID_APPLICATION_ID: ${{ vars.ANDROID_APPLICATION_ID }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for key in FIREBASE_GOOGLE_SERVICES_JSON ANDROID_APPLICATION_ID ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing GitHub secret/variable: $key. Configure it before running a signed release."
+              exit 1
+            fi
+          done
+          printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          python3 - <<'PY'
+          import json, os
+          with open("android/app/google-services.json", encoding="utf-8") as f:
+              data = json.load(f)
+          expected = os.environ["ANDROID_APPLICATION_ID"]
+          packages = {
+              c.get("client_info", {}).get("android_client_info", {}).get("package_name")
+              for c in data.get("client", [])
+          }
+          if expected not in packages:
+              raise SystemExit(f"Firebase config does not contain Android package {expected}")
+          if not any(
+              oauth.get("client_type") == 3 and oauth.get("client_id")
+              for client in data.get("client", [])
+              for oauth in client.get("oauth_client", [])
+          ):
+              raise SystemExit("Firebase config has no web OAuth client; configure Google Sign-In in Firebase.")
+          print("Firebase Android package and web OAuth client validated.")
+          PY
+
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release-keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=../release-keystore.jks
+          EOF
+
+      - name: Generate release version
+        id: version
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          BASE_VERSION=$(sed -n 's/^version: \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*$/\1/p' pubspec.yaml)
+          test -n "$BASE_VERSION"
+          VERSION_CODE=$((RUN_NUMBER * 100 + RUN_ATTEMPT))
+          echo "name=$BASE_VERSION.$RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Release version: $BASE_VERSION.$RUN_NUMBER (versionCode $VERSION_CODE)"
+
+      - name: Build signed APK for direct testing
+        run: flutter build apk --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}"
+
+      - name: Build signed Android App Bundle for Google Play
+        run: flutter build appbundle --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}"
+
+      - name: Verify release artifacts
+        run: |
+          set -euo pipefail
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          test -s build/app/outputs/bundle/release/app-release.aab
+          jarsigner -verify build/app/outputs/bundle/release/app-release.aab >/dev/null
+          sha256sum build/app/outputs/flutter-apk/app-release.apk build/app/outputs/bundle/release/app-release.aab
+
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: foplayer-release-${{ steps.version.outputs.name }}
+          path: |
+            apps/flutter/build/app/outputs/flutter-apk/app-release.apk
+            apps/flutter/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish to Google Play internal testing
+        if: ${{ inputs.publish }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ vars.ANDROID_APPLICATION_ID }}
+          releaseFiles: apps/flutter/build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
