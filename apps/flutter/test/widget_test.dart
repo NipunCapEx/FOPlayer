@@ -159,11 +159,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final addButton = find.byKey(const Key('add-instrument-button'));
-      await tester.scrollUntilVisible(
-        addButton,
-        250,
-        scrollable: find.byType(Scrollable).first,
-      );
+      await tester.ensureVisible(addButton);
       await tester.pumpAndSettle();
       await tester.tap(addButton);
       await tester.pumpAndSettle();
@@ -193,11 +189,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final addButton = find.byKey(const Key('add-instrument-button'));
-      await tester.scrollUntilVisible(
-        addButton,
-        250,
-        scrollable: find.byType(Scrollable).first,
-      );
+      await tester.ensureVisible(addButton);
       await tester.pumpAndSettle();
       await tester.tap(addButton);
       await tester.pumpAndSettle();
