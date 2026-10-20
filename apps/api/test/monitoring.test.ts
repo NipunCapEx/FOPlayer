@@ -348,6 +348,45 @@ describe('Indian equity market schedule', () => {
       false,
     );
   });
+
+  it('skips configured exchange holidays', () => {
+    expect(
+      isIndianEquityMarketOpen(new Date('2026-10-20T04:00:00.000Z'), {
+        holidays: ['2026-10-20'],
+      }),
+    ).toBe(false);
+  });
+
+  it('supports a special session outside normal hours, including weekends', () => {
+    expect(
+      isIndianEquityMarketOpen(new Date('2026-10-24T12:30:00.000Z'), {
+        specialSessions: {
+          '2026-10-24': { open: '18:00', close: '19:00' },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isIndianEquityMarketOpen(new Date('2026-10-24T12:00:00.000Z'), {
+        specialSessions: {
+          '2026-10-24': { open: '18:00', close: '19:00' },
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it('supports configured opening and closing times and fails closed on invalid clocks', () => {
+    expect(
+      isIndianEquityMarketOpen(new Date('2026-10-20T03:35:00.000Z'), {
+        openingTime: '09:00',
+        closingTime: '14:00',
+      }),
+    ).toBe(true);
+    expect(
+      isIndianEquityMarketOpen(new Date('2026-10-20T03:35:00.000Z'), {
+        openingTime: 'bad',
+      }),
+    ).toBe(false);
+  });
 });
 
 describe('PollingWorker', () => {
