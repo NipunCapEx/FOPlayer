@@ -91,7 +91,6 @@ class FOPlayerApp extends StatelessWidget {
   }
 }
 
-
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -114,7 +113,9 @@ class AuthGate extends StatelessWidget {
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to sign in with Google. Check Firebase OAuth setup.')),
+          const SnackBar(
+            content: Text(
+                'Unable to sign in with Google. Check Firebase OAuth setup.')),
         );
       }
     }
@@ -126,11 +127,14 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
         }
         final user = snapshot.data;
-        if (user == null) return GoogleLoginScreen(onSignIn: () => _signIn(context));
-        return DashboardScreen(onSignOut: () => FirebaseAuth.instance.signOut());
+        if (user == null)
+          return GoogleLoginScreen(onSignIn: () => _signIn(context));
+        return DashboardScreen(
+            onSignOut: () => FirebaseAuth.instance.signOut());
       },
     );
   }
@@ -156,10 +160,15 @@ class GoogleLoginScreen extends StatelessWidget {
                 children: [
                   const Icon(Icons.show_chart, size: 64),
                   const SizedBox(height: 16),
-                  Text('FnO Players', textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text('FnO Players',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('Sign in to access your personal hedging dashboard.',
+                  const Text(
+                    'Sign in to access your personal hedging dashboard.',
                     textAlign: TextAlign.center),
                   const SizedBox(height: 24),
                   FilledButton.icon(
@@ -169,8 +178,10 @@ class GoogleLoginScreen extends StatelessWidget {
                     label: const Text('Continue with Google'),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Demo market values are illustrative and are not trading advice.',
-                    textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+                  const Text(
+                    'Demo market values are illustrative and are not trading advice.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12)),
                 ],
               ),
             ),
@@ -201,12 +212,14 @@ class FirebaseSetupScreen extends StatelessWidget {
                   const Icon(Icons.cloud_off_outlined, size: 56),
                   const SizedBox(height: 16),
                   Text('Firebase setup required',
-                    style: Theme.of(context).textTheme.headlineSmall),
+                      style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 8),
-                  const Text('FnO Players needs its own Firebase Android app and Google sign-in configuration before you can sign in. Configure google-services.json and enable Google in Firebase Authentication.'),
+                  const Text(
+                    'FnO Players needs its own Firebase Android app and Google sign-in configuration before you can sign in. Configure google-services.json and enable Google in Firebase Authentication.'),
                   if (error != null) ...[
                     const SizedBox(height: 12),
-                    const Text('Initialization details are available in the app logs.',
+                    const Text(
+                      'Initialization details are available in the app logs.',
                       style: TextStyle(fontSize: 12)),
                   ],
                 ],
