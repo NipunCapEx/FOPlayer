@@ -116,6 +116,20 @@ void main() {
       expect(find.text('₹1120.00'), findsOneWidget);
     });
 
+    test('ages out an old validated snapshot', () {
+      final observedAt = DateTime.now().subtract(const Duration(minutes: 11));
+      final instrument = Instrument(
+        symbol: 'RELIANCE',
+        name: 'Reliance Industries',
+        entryPrice: 1000,
+        spotPrice: 1080,
+        lastUpdated: observedAt,
+        fetchedAt: observedAt,
+      );
+
+      expect(instrument.isCurrentlyStale, isTrue);
+    });
+
     test('uses the critical level at exactly 10% in either direction', () {
       for (final spot in [110.0, 90.0]) {
         final instrument = Instrument(
