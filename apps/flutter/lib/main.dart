@@ -182,8 +182,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: EdgeInsets.only(right: 16),
             child: Center(
               child: Chip(
-                avatar: const Icon(Icons.science_outlined, size: 18),
-                label: const Text('Prototype'),
+                avatar: Icon(Icons.science_outlined, size: 18),
+                label: Text('Prototype'),
               ),
             ),
           ),
