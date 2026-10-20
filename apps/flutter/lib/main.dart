@@ -283,7 +283,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
         isStale: true,
       ),
     ];
+    if (widget.apiClient != null) _loadPersistedWatchlist();
   }
+
+  Future<void> _loadPersistedWatchlist() async {
+    try {
+      var saved = await widget.apiClient!.listStrategies();
+      if (saved.isEmpty) {
+        for (final item in List<Instrument>.of(instruments)) {
+          saved = [...saved, await widget.apiClient!.createStrategy(
+            symbol: item.symbol, entryPrice: item.entryPrice,
+          )];
+        }
+      }
+      if (!mounted) return;
+      final fixtures = {for (final item in instruments) item.symbol: item};
+      setState(() {
+        _strategyIds
+          ..clear()
+          ..addEntries(saved.map((item) => MapEntry(item.symbol, item.id)));
+        instruments = saved.map((item) {
+          final fixture = fixtures[item.symbol];
+          if (fixture == null) return Instrument(
+            symbol: item.symbol,
+            name: _supportedSymbols[item.symbol] ?? item.symbol,
+            entryPrice: item.entryPrice,
+            spotPrice: item.entryPrice,
+            lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
+            isStale: true,
+          );
+          return fixture.copyWith(entryPrice: item.entryPrice);
+        }).toList();
+      });
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load saved watchlist: $error')),
+      );
+    }
+  }
+
+  final Map<String, String> _strategyIds = {};
 
   static const _supportedSymbols = <String, String>{
     'RELIANCE': 'Reliance Industries',
