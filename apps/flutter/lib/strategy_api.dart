@@ -133,6 +133,9 @@ class StrategyApiClient {
       );
     }
     final token = await user.getIdToken();
+    if (token == null || token.isEmpty) {
+      throw const StrategyApiException('Could not obtain a Firebase ID token.');
+    }
     final uri = Uri.parse('$_baseUrl$path');
     final headers = <String, String>{
       'Accept': 'application/json',
