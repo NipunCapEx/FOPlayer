@@ -95,7 +95,8 @@ void main() {
       }
     });
 
-    testWidgets('rejects non-positive entry values at the dialog boundary', (tester) async {
+    testWidgets('rejects non-positive entry values at the dialog boundary',
+        (tester) async {
       await tester.pumpWidget(const FOPlayerApp());
       final editButton = find.widgetWithText(TextButton, 'Edit entry').first;
       await tester.ensureVisible(editButton);
