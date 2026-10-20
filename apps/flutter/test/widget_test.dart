@@ -13,7 +13,10 @@ void main() {
       expect(find.text('BHARTIARTL'), findsOneWidget);
       expect(find.text('SBICARD'), findsOneWidget);
       expect(find.textContaining('DEMO DATA'), findsOneWidget);
-      expect(find.textContaining('Alerts and trading actions are not enabled.'), findsOneWidget);
+      expect(
+        find.textContaining('Alerts and trading actions are not enabled.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('labels an 8% move as caution and a 12% move as breached',
