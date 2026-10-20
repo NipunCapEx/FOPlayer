@@ -270,6 +270,7 @@ class ApiSetupScreen extends StatelessWidget {
     );
   }
 }
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, this.onSignOut, this.apiClient});
 
@@ -327,9 +328,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       var saved = await widget.apiClient!.listStrategies();
       if (saved.isEmpty) {
         for (final item in List<Instrument>.of(instruments)) {
-          saved = [...saved, await widget.apiClient!.createStrategy(
-            symbol: item.symbol, entryPrice: item.entryPrice,
-          )];
+          saved = [
+            ...saved,
+            await widget.apiClient!.createStrategy(
+              symbol: item.symbol,
+              entryPrice: item.entryPrice,
+            )
+          ];
         }
       }
       if (!mounted) return;
@@ -340,21 +345,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ..addEntries(saved.map((item) => MapEntry(item.symbol, item.id)));
         instruments = saved.map((item) {
           final fixture = fixtures[item.symbol];
-          if (fixture == null) return Instrument(
-            symbol: item.symbol,
-            name: _supportedSymbols[item.symbol] ?? item.symbol,
-            entryPrice: item.entryPrice,
-            spotPrice: item.entryPrice,
-            lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
-            isStale: true,
-          );
+          if (fixture == null)
+            return Instrument(
+              symbol: item.symbol,
+              name: _supportedSymbols[item.symbol] ?? item.symbol,
+              entryPrice: item.entryPrice,
+              spotPrice: item.entryPrice,
+              lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
+              isStale: true,
+            );
           return fixture.copyWith(entryPrice: item.entryPrice);
         }).toList();
       });
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not load saved watchlist: $error')),
-      );
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load saved watchlist: $error')),
+        );
     }
   }
 
@@ -415,9 +422,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await widget.apiClient!.updateStrategy(id, active: false);
       }
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not remove symbol: $error')),
-      );
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not remove symbol: $error')),
+        );
       return;
     }
     if (!mounted) return;
@@ -446,9 +454,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await widget.apiClient!.updateStrategy(id, entryPrice: newEntry);
       }
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save entry price: $error')),
-      );
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save entry price: $error')),
+        );
       return;
     }
     if (!mounted) return;
