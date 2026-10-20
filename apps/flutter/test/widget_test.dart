@@ -207,6 +207,40 @@ void main() {
       expect(find.byKey(const Key('save-new-symbol-button')), findsOneWidget);
     });
 
+    testWidgets('does not display a placeholder as a live market price',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: InstrumentCard(
+              instrument: Instrument(
+                symbol: 'RELIANCE',
+                name: 'Reliance Industries',
+                entryPrice: 1000,
+                spotPrice: 1000,
+                lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
+                isStale: true,
+                hasSpotPrice: false,
+              ),
+              onEditEntry: _noop,
+              isDemo: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Spot price'), findsOneWidget);
+      expect(find.text('Unavailable'), findsOneWidget);
+      expect(
+        find.text(
+          'No validated market snapshot is available. '
+          'No actionable risk state is shown.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Demo spot'), findsNothing);
+    });
+
     testWidgets('removes a symbol from the active watchlist', (tester) async {
       await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
       final removeButton = find.byKey(const Key('remove-RELIANCE'));
