@@ -35,7 +35,9 @@ export class InvalidRiskInputError extends Error {
 
 function assertPositiveFinite(value: number, label: string): void {
   if (!Number.isFinite(value) || value <= 0) {
-    throw new InvalidRiskInputError(`${label} must be a positive finite number`);
+    throw new InvalidRiskInputError(
+      `${label} must be a positive finite number`,
+    );
   }
 }
 
