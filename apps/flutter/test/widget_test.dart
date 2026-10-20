@@ -64,9 +64,6 @@ void main() {
     testWidgets('entry edit recalculates boundaries for the selected ticker',
         (tester) async {
       await tester.pumpWidget(const FOPlayerApp());
-      await tester.tap(find.byKey(const Key('risk-RELIANCE')));
-      // Risk label is not an edit action; use the explicit edit button.
-      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TextButton, 'Edit entry').first);
       await tester.pumpAndSettle();
 
@@ -79,6 +76,30 @@ void main() {
       expect(find.text('₹1000.00'), findsOneWidget);
       expect(find.text('₹880.00'), findsOneWidget);
       expect(find.text('₹1120.00'), findsOneWidget);
+    });
+    test('uses the critical level at exactly 10% in either direction', () {
+      for (final spot in [110.0, 90.0]) {
+        final instrument = Instrument(
+          symbol: 'TEST',
+          name: 'Threshold fixture',
+          entryPrice: 100,
+          spotPrice: spot,
+          lastUpdated: DateTime(2026, 10, 20),
+        );
+        expect(instrument.riskLevel, RiskLevel.critical);
+      }
+    });
+
+    test('rejects non-positive entry values at the dialog boundary', () async {
+      await tester.pumpWidget(const FOPlayerApp());
+      await tester.tap(find.widgetWithText(TextButton, 'Edit entry').first);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('entry-price-input')), '0');
+      await tester.tap(find.byKey(const Key('save-entry-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter a valid positive entry price.'), findsOneWidget);
+      expect(find.text('₹1232.00'), findsNothing);
     });
   });
 }
