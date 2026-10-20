@@ -404,6 +404,7 @@ export interface PollingWorkerOptions {
   intervalMs?: number;
   isMonitoringWindow?: (now: Date) => boolean;
   now?: () => Date;
+  onError?: (error: unknown) => void;
 }
 
 export class PollingWorker {
@@ -419,7 +420,15 @@ export class PollingWorker {
     if (this.timer) return;
     const intervalMs = this.options.intervalMs ?? 5 * 60 * 1000;
     this.timer = setInterval(() => {
-      void this.tick();
+      // A transient provider, Firestore, or notification failure must not
+      // become an unhandled rejection that destabilizes the NestJS process.
+      void this.tick().catch((error: unknown) => {
+        if (this.options.onError) {
+          this.options.onError(error);
+        } else {
+          console.error('F&O monitoring cycle failed; will retry next interval.', error);
+        }
+      });
     }, intervalMs);
   }
 
