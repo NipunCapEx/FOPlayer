@@ -6,9 +6,7 @@ import {
   type SupportedSymbol,
   type RiskAssessment,
 } from './risk-engine.js';
-import type {
-  MarketSnapshot,
-} from './market-data.js';
+import type { MarketSnapshot } from './market-data.js';
 import type {
   MonitoringRepository,
   RiskAlert,
@@ -125,7 +123,9 @@ export class FirestoreStrategyStore {
     return { strategies, snapshots, alerts };
   }
 
-  async listAlertsForOwner(ownerUid: string): Promise<Record<string, unknown>[]> {
+  async listAlertsForOwner(
+    ownerUid: string,
+  ): Promise<Record<string, unknown>[]> {
     const result = await this.db
       .collection('alerts')
       .where('ownerUid', '==', ownerUid)
@@ -140,7 +140,10 @@ export class FirestoreStrategyStore {
     strategyId: string,
     token: string,
   ): Promise<boolean> {
-    const strategy = await this.db.collection('strategies').doc(strategyId).get();
+    const strategy = await this.db
+      .collection('strategies')
+      .doc(strategyId)
+      .get();
     const data = strategy.data();
     if (!strategy.exists || data?.ownerUid !== ownerUid) return false;
 
@@ -240,10 +243,13 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
     strategyId: string,
     state: RiskEpisodeState,
   ): Promise<void> {
-    await this.db.collection('riskEpisodeStates').doc(strategyId).set({
-      ...state,
-      updatedAt: new Date(),
-    });
+    await this.db
+      .collection('riskEpisodeStates')
+      .doc(strategyId)
+      .set({
+        ...state,
+        updatedAt: new Date(),
+      });
   }
 
   async recordUnavailable(
@@ -268,7 +274,8 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
   }
 
   async enqueueAlert(alert: RiskAlert): Promise<void> {
-    const ownerUid = alert.ownerUid ?? (await this.getOwnerUid(alert.strategyId));
+    const ownerUid =
+      alert.ownerUid ?? (await this.getOwnerUid(alert.strategyId));
     try {
       await this.db
         .collection('alerts')
@@ -303,7 +310,9 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
         price: Number(data.price),
         movementPercent: Number(data.movementPercent),
         createdAt: toDate(data.createdAt),
-        ...(typeof data.ownerUid === 'string' ? { ownerUid: data.ownerUid } : {}),
+        ...(typeof data.ownerUid === 'string'
+          ? { ownerUid: data.ownerUid }
+          : {}),
       }));
   }
 
@@ -349,9 +358,7 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
   }
 }
 
-function toStrategyRecord(
-  doc: DocumentSnapshotPort,
-): StrategyRecord | null {
+function toStrategyRecord(doc: DocumentSnapshotPort): StrategyRecord | null {
   const data = doc.data();
   if (
     !doc.exists ||
