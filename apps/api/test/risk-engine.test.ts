@@ -79,9 +79,9 @@ describe('assessRisk — business outcomes', () => {
     undefined as unknown as number,
     null as unknown as number,
   ])('rejects invalid entry price %s', (entryPrice) => {
-    expect(() =>
-      assessRisk({ symbol, entryPrice, spotPrice: 1_000 }),
-    ).toThrow(InvalidRiskInputError);
+    expect(() => assessRisk({ symbol, entryPrice, spotPrice: 1_000 })).toThrow(
+      InvalidRiskInputError,
+    );
   });
 
   it('supports every symbol in the approved MVP scope', () => {
