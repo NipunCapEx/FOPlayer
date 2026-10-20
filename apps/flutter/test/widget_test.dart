@@ -37,10 +37,20 @@ void main() {
               ),
               InstrumentCard(
                 instrument: Instrument(
-                  symbol: 'BREACH',
-                  name: 'Boundary fixture',
+                  symbol: 'UPPER-BREACH',
+                  name: 'Upper boundary fixture',
                   entryPrice: 100,
                   spotPrice: 112,
+                  lastUpdated: DateTime(2026, 10, 20),
+                ),
+                onEditEntry: _noop,
+              ),
+              InstrumentCard(
+                instrument: Instrument(
+                  symbol: 'LOWER-BREACH',
+                  name: 'Lower boundary fixture',
+                  entryPrice: 100,
+                  spotPrice: 88,
                   lastUpdated: DateTime(2026, 10, 20),
                 ),
                 onEditEntry: _noop,
@@ -51,7 +61,7 @@ void main() {
       ));
 
       expect(find.text('CAUTION'), findsWidgets);
-      expect(find.text('BREACHED'), findsOneWidget);
+      expect(find.text('BREACHED'), findsNWidgets(2));
     });
 
     testWidgets('makes stale data explicit and suppresses movement display',
@@ -69,6 +79,7 @@ void main() {
       await tester.pumpWidget(const FOPlayerApp());
       final editButton = find.widgetWithText(TextButton, 'Edit entry').first;
       await tester.ensureVisible(editButton);
+      await tester.pumpAndSettle();
       await tester.tap(editButton);
       await tester.pumpAndSettle();
 
