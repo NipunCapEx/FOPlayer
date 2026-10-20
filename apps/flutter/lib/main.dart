@@ -259,6 +259,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Your watchlist',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    FilledButton.icon(
+                      key: const Key('add-instrument-button'),
+                      onPressed: _addInstrument,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add symbol'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (instruments.isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'Your watchlist is empty. Add a symbol to get started.',
+                      ),
+                    ),
+                  ),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final columns = constraints.maxWidth >= 850
@@ -386,7 +412,7 @@ class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
         children: [
           DropdownButtonFormField<String>(
             key: const Key('new-symbol-dropdown'),
-            value: symbol,
+            initialValue: symbol,
             decoration: const InputDecoration(labelText: 'Symbol'),
             items: [
               for (final item in widget.symbols)
