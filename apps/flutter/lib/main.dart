@@ -113,6 +113,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
   }
 
+  static const _supportedSymbols = <String, String>{
+    'RELIANCE': 'Reliance Industries',
+    'JSWSTEEL': 'JSW Steel',
+    'BHARTIARTL': 'Bharti Airtel',
+    'SBICARD': 'SBI Cards',
+    'TCS': 'Tata Consultancy Services',
+    'INFY': 'Infosys',
+    'HDFCBANK': 'HDFC Bank',
+    'ICICIBANK': 'ICICI Bank',
+  };
+
+  Future<void> _addInstrument() async {
+    final available = _supportedSymbols.keys
+        .where((symbol) => !instruments.any((item) => item.symbol == symbol))
+        .toList();
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All supported demo symbols are already added.')),
+      );
+      return;
+    }
+    final result = await showDialog<Instrument>(
+      context: context,
+      builder: (dialogContext) => AddInstrumentDialog(
+        symbols: available,
+        names: _supportedSymbols,
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() => instruments = [...instruments, result]);
+  }
+
+  void _removeInstrument(Instrument instrument) {
+    setState(() {
+      instruments = instruments
+          .where((item) => item.symbol != instrument.symbol)
+          .toList();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${instrument.symbol} removed from this dashboard.')),
+    );
+  }
+
   Future<void> _editEntry(Instrument instrument) async {
     final newEntry = await showDialog<double>(
       context: context,
@@ -139,7 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('FOPlayer'),
+        title: const Text('FnO Players'),
         actions: [
           const Padding(
             padding: EdgeInsets.only(right: 16),
@@ -230,7 +273,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             width: cardWidth,
                             child: InstrumentCard(
                               instrument: instrument,
-                              onEditEntry: () => _editEntry(instrument),
+                              onEditEntry: () => _editEntry(instrument),\n                              onRemove: () => _removeInstrument(instrument),
                             ),
                           ),
                       ],
@@ -276,7 +319,106 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class EntryPriceDialog extends StatefulWidget {
+
+class AddInstrumentDialog extends StatefulWidget {
+  const AddInstrumentDialog({
+    required this.symbols,
+    required this.names,
+    super.key,
+  });
+
+  final List<String> symbols;
+  final Map<String, String> names;
+
+  @override
+  State<AddInstrumentDialog> createState() => _AddInstrumentDialogState();
+}
+
+class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
+  late String symbol;
+  late final TextEditingController entryController;
+
+  @override
+  void initState() {
+    super.initState();
+    symbol = widget.symbols.first;
+    entryController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    entryController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final entry = double.tryParse(entryController.text.trim());
+    if (entry == null || !entry.isFinite || entry <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid positive entry price.')),
+      );
+      return;
+    }
+    final now = DateTime.now();
+    Navigator.of(context).pop(
+      Instrument(
+        symbol: symbol,
+        name: widget.names[symbol]!,
+        entryPrice: entry,
+        // Until a live provider is configured, do not fabricate a market quote.
+        spotPrice: entry,
+        lastUpdated: now,
+        isStale: true,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add watchlist symbol'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String>(
+            key: const Key('new-symbol-dropdown'),
+            value: symbol,
+            decoration: const InputDecoration(labelText: 'Symbol'),
+            items: [
+              for (final item in widget.symbols)
+                DropdownMenuItem(value: item, child: Text(item)),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => symbol = value);
+            },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('new-entry-price-input'),
+            controller: entryController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Entry price (₹)',
+              hintText: 'Enter your entry price',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('save-new-symbol-button'),
+          onPressed: _save,
+          child: const Text('Add symbol'),
+        ),
+      ],
+    );
+  }
+}
+\nclass EntryPriceDialog extends StatefulWidget {
   const EntryPriceDialog({required this.instrument, super.key});
 
   final Instrument instrument;
@@ -387,11 +529,13 @@ class InstrumentCard extends StatelessWidget {
   const InstrumentCard({
     required this.instrument,
     required this.onEditEntry,
+    this.onRemove,
     super.key,
   });
 
   final Instrument instrument;
   final VoidCallback onEditEntry;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
