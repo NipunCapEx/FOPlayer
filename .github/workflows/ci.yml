@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: ['**']
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Validation scope
+        required: true
+        type: choice
+        default: full
+        options: [full, backend, frontend, android, repository]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  repository:
+    name: Repository and secret hygiene
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.scope == 'full' || inputs.scope == 'repository' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate required governance files
+        run: |
+          set -euo pipefail
+          test -f .github/copilot-instructions.md
+          test -f .ai/repo-profile.md
+          test -f .github/PULL_REQUEST_TEMPLATE.md
+          test -f docs/architecture/fno-hedging-dashboard.md
+          test -f docs/qa/coverage-inventory.md
+          test -f docs/release/runbook.md
+      - name: Scan for leaked secrets
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.2 detect --source=/repo --redact --exit-code 1
+
+  backend:
+    name: Backend - typecheck, tests and coverage
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.scope == 'full' || inputs.scope == 'backend' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Formatting check
+        run: npm run format:check
+      - name: Typecheck and build
+        run: npm run build
+      - name: Unit tests with coverage
+        run: npm run test:coverage
+
+  frontend:
+    name: Flutter - analyze, tests and web build
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.scope == 'full' || inputs.scope == 'frontend' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check whether Flutter app exists
+        id: flutter
+        shell: bash
+        run: |
+          if [ -f apps/flutter/pubspec.yaml ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Flutter app not introduced yet; frontend checks are not applicable."
+          fi
+      - uses: subosito/flutter-action@v2
+        if: steps.flutter.outputs.available == 'true'
+        with:
+          channel: stable
+          cache: true
+      - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
+        run: flutter pub get
+      - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
+        run: dart format --output=none --set-exit-if-changed .
+      - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
+        run: flutter analyze
+      - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
+        run: flutter test --coverage
+      - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
+        run: flutter build web --release
+
+  android-release-build:
+    name: Android release build (manual)
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.scope == 'full' || inputs.scope == 'android') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check whether Flutter app exists
+        id: flutter
+        shell: bash
+        run: |
+          if [ -f apps/flutter/pubspec.yaml ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Flutter app not introduced yet; Android release build is not applicable."
+          fi
+      - uses: subosito/flutter-action@v2
+        if: steps.flutter.outputs.available == 'true'
+        with:
+          channel: stable
+          cache: true
+      - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
+        run: flutter pub get
+      - working-directory: apps/flutter
+        if: steps.flutter.outputs.available == 'true'
+        run: flutter build apk --release
+
+  status:
+    name: Required CI summary
+    if: always()
+    needs: [repository, backend, frontend, android-release-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce required PR gates
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCOPE: ${{ inputs.scope || 'full' }}
+          REPOSITORY_RESULT: ${{ needs.repository.result }}
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          ANDROID_RESULT: ${{ needs.android-release-build.result }}
+        run: |
+          set -euo pipefail
+          for result in "$REPOSITORY_RESULT" "$BACKEND_RESULT"; do
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "A required repository/backend job failed: $result"
+              exit 1
+            fi
+          done
+          if [ "$EVENT_NAME" != "workflow_dispatch" ] || [ "$SCOPE" = "full" ] || [ "$SCOPE" = "frontend" ]; then
+            if [ "$FRONTEND_RESULT" != "success" ] && [ "$FRONTEND_RESULT" != "skipped" ]; then
+              echo "Frontend validation failed: $FRONTEND_RESULT"
+              exit 1
+            fi
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && { [ "$SCOPE" = "full" ] || [ "$SCOPE" = "android" ]; }; then
+            if [ "$ANDROID_RESULT" != "success" ] && [ "$ANDROID_RESULT" != "skipped" ]; then
+              echo "Android release build failed: $ANDROID_RESULT"
+              exit 1
+            fi
+          fi
