@@ -114,47 +114,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _editEntry(Instrument instrument) async {
-    final controller = TextEditingController(
-      text: instrument.entryPrice.toStringAsFixed(2),
-    );
     final newEntry = await showDialog<double>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Edit ${instrument.symbol} entry'),
-        content: TextField(
-          key: const Key('entry-price-input'),
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Entry price (₹)',
-            hintText: 'Enter a positive price',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const Key('save-entry-button'),
-            onPressed: () {
-              final value = double.tryParse(controller.text.trim());
-              if (value == null || !value.isFinite || value <= 0) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(
-                    content: Text('Enter a valid positive entry price.'),
-                  ),
-                );
-                return;
-              }
-              Navigator.pop(dialogContext, value);
-            },
-            child: const Text('Save entry'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) => EntryPriceDialog(instrument: instrument),
     );
-    controller.dispose();
     if (newEntry == null || !mounted) return;
     setState(() {
       instruments = [
@@ -309,6 +272,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class EntryPriceDialog extends StatefulWidget {
+  const EntryPriceDialog({required this.instrument, super.key});
+
+  final Instrument instrument;
+
+  @override
+  State<EntryPriceDialog> createState() => _EntryPriceDialogState();
+}
+
+class _EntryPriceDialogState extends State<EntryPriceDialog> {
+  late final TextEditingController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController(
+      text: widget.instrument.entryPrice.toStringAsFixed(2),
+    );
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Edit ${widget.instrument.symbol} entry'),
+      content: TextField(
+        key: const Key('entry-price-input'),
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: const InputDecoration(
+          labelText: 'Entry price (₹)',
+          hintText: 'Enter a positive price',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('save-entry-button'),
+          onPressed: () {
+            final value = double.tryParse(controller.text.trim());
+            if (value == null || !value.isFinite || value <= 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Enter a valid positive entry price.'),
+                ),
+              );
+              return;
+            }
+            Navigator.pop(context, value);
+          },
+          child: const Text('Save entry'),
+        ),
+      ],
     );
   }
 }
