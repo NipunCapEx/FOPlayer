@@ -201,8 +201,10 @@ void main() {
       await tester.tap(find.byKey(const Key('save-new-symbol-button')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Enter a valid positive entry price.'), findsOneWidget);
+      // Invalid input must leave the add dialog open instead of creating a symbol.
+      expect(find.text('Add watchlist symbol'), findsOneWidget);
       expect(find.byKey(const Key('new-entry-price-input')), findsOneWidget);
+      expect(find.byKey(const Key('save-new-symbol-button')), findsOneWidget);
     });
 
     testWidgets('removes a symbol from the active watchlist', (tester) async {
