@@ -1,0 +1,19 @@
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { FirebaseAdminService } from './firebase-admin.service.js';
+import { PollingWorker } from './monitoring.js';
+
+@Injectable()
+export class MonitoringRunner implements OnModuleInit, OnModuleDestroy {
+  constructor(
+    private readonly firebase: FirebaseAdminService,
+    private readonly worker: PollingWorker,
+  ) {}
+
+  onModuleInit(): void {
+    if (this.firebase.isConfigured) this.worker.start();
+  }
+
+  onModuleDestroy(): void {
+    this.worker.stop();
+  }
+}
