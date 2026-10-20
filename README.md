@@ -17,7 +17,7 @@ Python, Redis, PostgreSQL/Prisma, and microservices are not required for the MVP
 
 ## Implementation status
 
-The Flutter dashboard still displays clearly labelled demo market-price fixtures. The authenticated Flutter client now persists each user's watchlist through the NestJS API and includes an alert-history view backed by the owner-scoped alerts endpoint. The repository contains the NestJS/Firebase runtime, token verification, Firestore persistence, monitoring and notification core; deployed HTTPS/Firebase configuration, live-price UI integration, an always-on worker deployment, and real Firebase/FCM smoke tests remain to be verified. Do not use demo prices for trading decisions or treat this repository state as a production alerting service.
+The Flutter prototype mode uses clearly labelled demo market-price fixtures. The authenticated dashboard persists each user's watchlist through the NestJS API, includes owner-scoped alert history, and reads the latest validated backend market snapshots with source/timestamps and a 10-minute freshness gate. Missing or stale snapshots are never shown as current prices. The repository contains the NestJS/Firebase runtime, token verification, Firestore persistence, monitoring and notification core; deployed HTTPS/Firebase configuration, an always-on worker deployment, and real Firebase/FCM smoke tests remain to be verified. Do not use demo prices for trading decisions or treat this repository state as a production alerting service.
 
 ## Specification
 

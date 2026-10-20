@@ -116,6 +116,20 @@ void main() {
       expect(find.text('₹1120.00'), findsOneWidget);
     });
 
+    test('ages out an old validated snapshot', () {
+      final observedAt = DateTime.now().subtract(const Duration(minutes: 11));
+      final instrument = Instrument(
+        symbol: 'RELIANCE',
+        name: 'Reliance Industries',
+        entryPrice: 1000,
+        spotPrice: 1080,
+        lastUpdated: observedAt,
+        fetchedAt: observedAt,
+      );
+
+      expect(instrument.isCurrentlyStale, isTrue);
+    });
+
     test('uses the critical level at exactly 10% in either direction', () {
       for (final spot in [110.0, 90.0]) {
         final instrument = Instrument(
@@ -205,6 +219,40 @@ void main() {
       expect(find.text('Add watchlist symbol'), findsOneWidget);
       expect(find.byKey(const Key('new-entry-price-input')), findsOneWidget);
       expect(find.byKey(const Key('save-new-symbol-button')), findsOneWidget);
+    });
+
+    testWidgets('does not display a placeholder as a live market price',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: InstrumentCard(
+              instrument: Instrument(
+                symbol: 'RELIANCE',
+                name: 'Reliance Industries',
+                entryPrice: 1000,
+                spotPrice: 1000,
+                lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
+                isStale: true,
+                hasSpotPrice: false,
+              ),
+              onEditEntry: _noop,
+              isDemo: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Spot price'), findsOneWidget);
+      expect(find.text('Unavailable'), findsOneWidget);
+      expect(
+        find.text(
+          'No validated market snapshot is available. '
+          'No actionable risk state is shown.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Demo spot'), findsNothing);
     });
 
     testWidgets('removes a symbol from the active watchlist', (tester) async {

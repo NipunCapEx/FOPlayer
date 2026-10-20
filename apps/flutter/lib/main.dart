@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +31,9 @@ class Instrument {
     required this.spotPrice,
     required this.lastUpdated,
     this.isStale = false,
+    this.hasSpotPrice = true,
+    this.dataSource,
+    this.fetchedAt,
   });
 
   final String symbol;
@@ -37,6 +42,24 @@ class Instrument {
   final double spotPrice;
   final DateTime lastUpdated;
   final bool isStale;
+  final bool hasSpotPrice;
+  final String? dataSource;
+  final DateTime? fetchedAt;
+
+  bool get isCurrentlyStale {
+    if (isStale) return true;
+    final fetched = fetchedAt;
+    if (fetched == null) return false;
+    const maxAge = Duration(minutes: 10);
+    const maxFutureSkew = Duration(minutes: 1);
+    final now = DateTime.now();
+    final fetchAge = now.difference(fetched);
+    final exchangeAge = now.difference(lastUpdated);
+    return fetchAge > maxAge ||
+        fetchAge < -maxFutureSkew ||
+        exchangeAge > maxAge ||
+        exchangeAge < -maxFutureSkew;
+  }
 
   double get lowerBoundary => entryPrice * 0.88;
   double get upperBoundary => entryPrice * 1.12;
@@ -52,13 +75,25 @@ class Instrument {
     return RiskLevel.normal;
   }
 
-  Instrument copyWith({double? entryPrice}) => Instrument(
+  Instrument copyWith({
+    double? entryPrice,
+    double? spotPrice,
+    DateTime? lastUpdated,
+    bool? isStale,
+    bool? hasSpotPrice,
+    String? dataSource,
+    DateTime? fetchedAt,
+  }) =>
+      Instrument(
         symbol: symbol,
         name: name,
         entryPrice: entryPrice ?? this.entryPrice,
-        spotPrice: spotPrice,
-        lastUpdated: lastUpdated,
-        isStale: isStale,
+        spotPrice: spotPrice ?? this.spotPrice,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+        isStale: isStale ?? this.isStale,
+        hasSpotPrice: hasSpotPrice ?? this.hasSpotPrice,
+        dataSource: dataSource ?? this.dataSource,
+        fetchedAt: fetchedAt ?? this.fetchedAt,
       );
 }
 
@@ -284,11 +319,14 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late List<Instrument> instruments;
+  bool _dashboardLoading = false;
+  String? _dashboardError;
+  Timer? _freshnessTimer;
 
   @override
   void initState() {
     super.initState();
-    // Explicitly labelled fixtures: the live provider/API is part of milestone 3.
+    // Explicitly labelled fixtures are used only in prototype mode.
     final now = DateTime(2026, 10, 20, 11, 0);
     instruments = [
       Instrument(
@@ -321,50 +359,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
         isStale: true,
       ),
     ];
-    if (widget.apiClient != null) _loadPersistedWatchlist();
+    if (widget.apiClient != null) {
+      instruments = instruments
+          .map((item) => item.copyWith(isStale: true, hasSpotPrice: false))
+          .toList();
+      _freshnessTimer = Timer.periodic(
+        const Duration(minutes: 1),
+        (_) => _refreshSnapshotFreshness(),
+      );
+      _loadPersistedWatchlist();
+    }
+  }
+
+  @override
+  void dispose() {
+    _freshnessTimer?.cancel();
+    super.dispose();
+  }
+
+  void _refreshSnapshotFreshness() {
+    if (!mounted || widget.apiClient == null) return;
+    final refreshed = instruments
+        .map((item) => item.copyWith(isStale: item.isCurrentlyStale))
+        .toList();
+    if (refreshed.asMap().entries.any(
+          (entry) => entry.value.isStale != instruments[entry.key].isStale,
+        )) {
+      setState(() => instruments = refreshed);
+    }
   }
 
   Future<void> _loadPersistedWatchlist() async {
+    final apiClient = widget.apiClient;
+    if (apiClient == null) return;
+    setState(() {
+      _dashboardLoading = true;
+      _dashboardError = null;
+    });
     try {
-      var saved = await widget.apiClient!.listStrategies();
-      if (saved.isEmpty) {
+      var dashboard = await apiClient.getDashboard();
+      if (!dashboard.hasAnyStrategies) {
         for (final item in List<Instrument>.of(instruments)) {
-          saved = [
-            ...saved,
-            await widget.apiClient!.createStrategy(
-              symbol: item.symbol,
-              entryPrice: item.entryPrice,
-            )
-          ];
+          await apiClient.createStrategy(
+            symbol: item.symbol,
+            entryPrice: item.entryPrice,
+          );
         }
+        dashboard = await apiClient.getDashboard();
       }
       if (!mounted) return;
       final fixtures = {for (final item in instruments) item.symbol: item};
+      final now = DateTime.now();
       setState(() {
         _strategyIds
           ..clear()
-          ..addEntries(saved.map((item) => MapEntry(item.symbol, item.id)));
-        instruments = saved.map((item) {
+          ..addEntries(dashboard.strategies.map(
+            (item) => MapEntry(item.symbol, item.id),
+          ));
+        instruments = dashboard.strategies.map((item) {
           final fixture = fixtures[item.symbol];
-          if (fixture == null) {
-            return Instrument(
-              symbol: item.symbol,
-              name: _supportedSymbols[item.symbol] ?? item.symbol,
-              entryPrice: item.entryPrice,
-              spotPrice: item.entryPrice,
-              lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
-              isStale: true,
-            );
-          }
-          return fixture.copyWith(entryPrice: item.entryPrice);
+          final snapshot = dashboard.snapshots[item.id];
+          final hasSnapshot = snapshot != null;
+          final fresh = snapshot?.isFreshAt(now) ?? false;
+          return Instrument(
+            symbol: item.symbol,
+            name:
+                fixture?.name ?? _supportedSymbols[item.symbol] ?? item.symbol,
+            entryPrice: item.entryPrice,
+            spotPrice: snapshot?.spotPrice ?? item.entryPrice,
+            lastUpdated: snapshot?.exchangeTimestamp ??
+                DateTime.fromMillisecondsSinceEpoch(0),
+            isStale: !fresh,
+            hasSpotPrice: hasSnapshot,
+            dataSource: snapshot?.source,
+            fetchedAt: snapshot?.fetchedAt,
+          );
         }).toList();
+        _dashboardLoading = false;
       });
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not load saved watchlist: $error')),
-        );
-      }
+      if (!mounted) return;
+      setState(() {
+        _dashboardLoading = false;
+        _dashboardError = error.toString();
+        instruments =
+            instruments.map((item) => item.copyWith(isStale: true)).toList();
+      });
     }
   }
 
@@ -479,15 +559,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeCount = instruments.where((i) => !i.isStale).length;
+    final activeCount = instruments.where((i) => !i.isCurrentlyStale).length;
     final breachedCount = instruments
-        .where((i) => !i.isStale && i.riskLevel == RiskLevel.breached)
+        .where((i) => !i.isCurrentlyStale && i.riskLevel == RiskLevel.breached)
         .length;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('FnO Players'),
         actions: [
+          if (widget.apiClient != null)
+            IconButton(
+              key: const Key('refresh-dashboard-button'),
+              tooltip: 'Refresh market snapshots',
+              onPressed: _dashboardLoading ? null : _loadPersistedWatchlist,
+              icon: const Icon(Icons.refresh),
+            ),
           if (widget.apiClient != null)
             IconButton(
               key: const Key('open-alert-history-button'),
@@ -539,24 +626,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 16),
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(14),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'DEMO DATA — prices are illustrative fixtures, not live '
-                            'market data. Alerts and trading actions are not enabled.',
+                if (widget.apiClient == null)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'DEMO DATA — prices are illustrative fixtures, not live '
+                              'market data. Alerts and trading actions are not enabled.',
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_dashboardLoading)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Loading your saved watchlist and validated market snapshots.',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_dashboardError != null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Dashboard data unavailable',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Could not refresh the authenticated dashboard: $_dashboardError',
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              key: const Key('retry-dashboard-button'),
+                              onPressed: _loadPersistedWatchlist,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.verified_outlined),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Market prices are shown only when a validated backend snapshot is available. '
+                              'Missing or older-than-10-minute snapshots are marked stale. This app does not place trades.',
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
@@ -568,7 +724,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.show_chart,
                     ),
                     _SummaryTile(
-                      label: 'Valid demo snapshots',
+                      label: widget.apiClient == null
+                          ? 'Valid demo snapshots'
+                          : 'Fresh market snapshots',
                       value: '$activeCount',
                       icon: Icons.verified_outlined,
                     ),
@@ -626,6 +784,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               instrument: instrument,
                               onEditEntry: () => _editEntry(instrument),
                               onRemove: () => _removeInstrument(instrument),
+                              isDemo: widget.apiClient == null,
                             ),
                           ),
                       ],
@@ -882,18 +1041,20 @@ class InstrumentCard extends StatelessWidget {
     required this.instrument,
     required this.onEditEntry,
     this.onRemove,
+    this.isDemo = true,
     super.key,
   });
 
   final Instrument instrument;
   final VoidCallback onEditEntry;
   final VoidCallback? onRemove;
+  final bool isDemo;
 
   @override
   Widget build(BuildContext context) {
     final level = instrument.riskLevel;
     final snapshotTime = instrument.lastUpdated.toString().substring(0, 16);
-    final levelLabel = instrument.isStale
+    final levelLabel = instrument.isCurrentlyStale
         ? 'DATA STALE'
         : switch (level) {
             RiskLevel.normal => 'NORMAL',
@@ -901,7 +1062,7 @@ class InstrumentCard extends StatelessWidget {
             RiskLevel.critical => 'CRITICAL',
             RiskLevel.breached => 'BREACHED',
           };
-    final color = instrument.isStale
+    final color = instrument.isCurrentlyStale
         ? Colors.blueGrey
         : switch (level) {
             RiskLevel.normal => Colors.green.shade700,
@@ -963,21 +1124,32 @@ class InstrumentCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Demo spot'),
                       Text(
-                        '₹${instrument.spotPrice.toStringAsFixed(2)}',
+                        isDemo
+                            ? 'Demo spot'
+                            : instrument.hasSpotPrice
+                                ? instrument.isCurrentlyStale
+                                    ? 'Last observed spot'
+                                    : 'Spot'
+                                : 'Spot price',
+                      ),
+                      Text(
+                        instrument.hasSpotPrice
+                            ? '₹${instrument.spotPrice.toStringAsFixed(2)}'
+                            : 'Unavailable',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                     ],
                   ),
                 ),
                 Text(
-                  instrument.isStale
+                  instrument.isCurrentlyStale
                       ? 'Movement unavailable'
                       : '${instrument.movementPercent >= 0 ? '+' : ''}'
                           '${instrument.movementPercent.toStringAsFixed(2)}%',
                   style: TextStyle(
-                    color: instrument.isStale ? Colors.blueGrey : color,
+                    color:
+                        instrument.isCurrentlyStale ? Colors.blueGrey : color,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -994,14 +1166,20 @@ class InstrumentCard extends StatelessWidget {
               value: instrument.upperBoundary,
             ),
             const SizedBox(height: 10),
-            if (instrument.isStale)
-              const Text(
-                'Snapshot is stale. No actionable risk state is shown.',
-                key: Key('stale-message'),
+            if (instrument.isCurrentlyStale)
+              Text(
+                isDemo
+                    ? 'Snapshot is stale. No actionable risk state is shown.'
+                    : instrument.hasSpotPrice
+                        ? 'Snapshot is stale. Last observed at $snapshotTime from ${instrument.dataSource ?? 'unknown'}. No actionable risk state is shown.'
+                        : 'No validated market snapshot is available. No actionable risk state is shown.',
+                key: const Key('stale-message'),
               )
             else
               Text(
-                'Snapshot time: $snapshotTime',
+                isDemo
+                    ? 'Snapshot time: $snapshotTime'
+                    : 'Source: ${instrument.dataSource ?? 'unknown'} · Exchange time: $snapshotTime',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             Row(
