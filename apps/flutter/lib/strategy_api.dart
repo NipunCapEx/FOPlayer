@@ -151,14 +151,12 @@ class StrategyApiClient {
     if (response is! List) {
       throw const StrategyApiException('Unexpected alerts response.');
     }
-    return response
-        .map((value) {
-          if (value is! Map<String, dynamic>) {
-            throw const FormatException('Invalid alert response item.');
-          }
-          return UserAlert.fromJson(value);
-        })
-        .toList();
+    return response.map((value) {
+      if (value is! Map<String, dynamic>) {
+        throw const FormatException('Invalid alert response item.');
+      }
+      return UserAlert.fromJson(value);
+    }).toList();
   }
 
   Future<UserStrategy> createStrategy({
