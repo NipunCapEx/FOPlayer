@@ -324,7 +324,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-
 class AddInstrumentDialog extends StatefulWidget {
   const AddInstrumentDialog({
     required this.symbols,
