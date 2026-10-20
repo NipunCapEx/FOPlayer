@@ -96,11 +96,20 @@ describe('special market session configuration', () => {
   });
 
   it('rejects invalid date keys and invalid session values', () => {
-    expect(() => readSpecialSessions('{"not-a-date":{"open":"09:00","close":"10:00"}}'))
-      .toThrow('Each special market session must use an ISO date and open/close times.');
-    expect(() => readSpecialSessions('{"2026-11-08":null}'))
-      .toThrow('Each special market session must use an ISO date and open/close times.');
-    expect(() => readSpecialSessions('{"2026-11-08":{"open":9,"close":"10:00"}}'))
-      .toThrow('Each special market session must include string open and close times.');
+    expect(() =>
+      readSpecialSessions(
+        '{"not-a-date":{"open":"09:00","close":"10:00"}}',
+      ),
+    ).toThrow(
+      'Each special market session must use an ISO date and open/close times.',
+    );
+    expect(() => readSpecialSessions('{"2026-11-08":null}')).toThrow(
+      'Each special market session must use an ISO date and open/close times.',
+    );
+    expect(() =>
+      readSpecialSessions('{"2026-11-08":{"open":9,"close":"10:00"}}'),
+    ).toThrow(
+      'Each special market session must include string open and close times.',
+    );
   });
 });
