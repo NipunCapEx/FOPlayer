@@ -94,7 +94,9 @@ void main() {
 
     test('rejects non-positive entry values at the dialog boundary', () async {
       await tester.pumpWidget(const FOPlayerApp());
-      await tester.tap(find.widgetWithText(TextButton, 'Edit entry').first);
+      final editButton = find.widgetWithText(TextButton, 'Edit entry').first;
+      await tester.ensureVisible(editButton);
+      await tester.tap(editButton);
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('entry-price-input')), '0');
       await tester.tap(find.byKey(const Key('save-entry-button')));
