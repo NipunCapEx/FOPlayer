@@ -42,6 +42,14 @@ describe('assessRisk — business outcomes', () => {
     },
   );
 
+  it.each([112, 88])(
+    'marks exact ±12%% movement at entry 100 as breached (spot %s)',
+    (spotPrice) => {
+      const result = assessRisk({ symbol, entryPrice: 100, spotPrice });
+      expect(result.level).toBe('breached');
+    },
+  );
+
   it('distinguishes movement from boundary distance', () => {
     const result = assess(1_050);
     expect(result.movementPercent).toBeCloseTo(5);
