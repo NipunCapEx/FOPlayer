@@ -130,7 +130,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList();
     if (available.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All supported demo symbols are already added.')),
+        const SnackBar(
+          content: Text('All supported demo symbols are already added.'),
+        ),
       );
       return;
     }
@@ -152,7 +154,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .toList();
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${instrument.symbol} removed from this dashboard.')),
+      SnackBar(
+        content: Text('${instrument.symbol} removed from this dashboard.'),
+      ),
     );
   }
 
