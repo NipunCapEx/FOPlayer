@@ -277,26 +277,38 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       entryPrice: 800,
       active: true,
     });
-    await db.collection('strategySnapshots').doc(own.id).set({
+    await db
+      .collection('strategySnapshots')
+      .doc(own.id)
+      .set({
       assessment,
       source: 'fixture',
       exchangeTimestamp: new Date('2026-10-20T10:00:00Z'),
       fetchedAt: new Date('2026-10-20T10:00:01Z'),
       recordedAt: new Date('2026-10-20T10:00:02Z'),
     });
-    await db.collection('strategySnapshots').doc(secondOwn.id).set({
+    await db
+      .collection('strategySnapshots')
+      .doc(secondOwn.id)
+      .set({
       assessment,
       source: 'fixture-2',
       exchangeTimestamp: '2026-10-20T10:00:00Z',
       fetchedAt: { toDate: () => new Date('2026-10-20T10:00:01Z') },
       recordedAt: 'not-a-date',
     });
-    await db.collection('alerts').doc('own-alert').set({
+    await db
+      .collection('alerts')
+      .doc('own-alert')
+      .set({
       ownerUid: 'owner-a',
       createdAt: new Date('2026-10-20T10:00:00Z'),
       kind: 'caution',
     });
-    await db.collection('alerts').doc('foreign-alert').set({
+    await db
+      .collection('alerts')
+      .doc('foreign-alert')
+      .set({
       ownerUid: 'owner-b',
       createdAt: new Date('2026-10-20T10:01:00Z'),
       kind: 'critical',
@@ -324,12 +336,20 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       strategies.registerDeviceToken('owner-b', strategy.id, 'device-token'),
     ).resolves.toBe(false);
     await expect(
-      strategies.registerDeviceToken('owner-a', 'missing-strategy', 'device-token'),
+      strategies.registerDeviceToken(
+        'owner-a',
+        'missing-strategy',
+        'device-token',
+      ),
     ).resolves.toBe(false);
     await expect(
       strategies.registerDeviceToken('owner-a', strategy.id, 'device-token'),
     ).resolves.toBe(true);
-    await strategies.registerDeviceToken('owner-a', strategy.id, 'another-device-token');
+    await strategies.registerDeviceToken(
+      'owner-a',
+      strategy.id,
+      'another-device-token',
+    );
     await db.collection('deviceTokens').doc('non-string-token').set({
       strategyId: strategy.id,
       active: true,
