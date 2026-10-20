@@ -88,16 +88,17 @@ class UserAlert {
 }
 
 DateTime? _parseAlertDate(dynamic value) {
-  if (value is String) return DateTime.tryParse(value)?.toLocal();
+  if (value is String) {
+    return DateTime.tryParse(value)?.toLocal();
+  }
   if (value is num) {
     return DateTime.fromMillisecondsSinceEpoch(value.toInt()).toLocal();
   }
   if (value is Map<String, dynamic>) {
     final seconds = value['seconds'] ?? value['_seconds'];
     if (seconds is num) {
-      return DateTime.fromMillisecondsSinceEpoch(
-        seconds.toInt() * 1000,
-      ).toLocal();
+      final milliseconds = seconds.toInt() * 1000;
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds).toLocal();
     }
   }
   return null;
