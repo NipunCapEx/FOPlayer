@@ -134,23 +134,22 @@ class StrategyApiClient {
     if (body != null) headers['Content-Type'] = 'application/json';
 
     late http.Response response;
-    switch (method) {
-      case 'GET':
-        response = await _client.get(uri, headers: headers);
-      case 'POST':
-        response = await _client.post(
-          uri,
-          headers: headers,
-          body: jsonEncode(body),
-        );
-      case 'PATCH':
-        response = await _client.patch(
-          uri,
-          headers: headers,
-          body: jsonEncode(body),
-        );
-      default:
-        throw ArgumentError.value(method, 'method', 'Unsupported HTTP method');
+    if (method == 'GET') {
+      response = await _client.get(uri, headers: headers);
+    } else if (method == 'POST') {
+      response = await _client.post(
+        uri,
+        headers: headers,
+        body: jsonEncode(body),
+      );
+    } else if (method == 'PATCH') {
+      response = await _client.patch(
+        uri,
+        headers: headers,
+        body: jsonEncode(body),
+      );
+    } else {
+      throw ArgumentError.value(method, 'method', 'Unsupported HTTP method');
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
