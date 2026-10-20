@@ -24,29 +24,29 @@ afterEach(() => {
 });
 
 it('reports Telegram configured only for a single allowlisted UID', () => {
-    const original = new Map(
-      ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'FIREBASE_ALLOWED_UIDS'].map(
-        (key) => [key, process.env[key]],
-      ),
-    );
-    try {
-      process.env.TELEGRAM_BOT_TOKEN = 'server-token';
-      process.env.TELEGRAM_CHAT_ID = 'private-chat';
-      const controller = new HealthController({
-        isConfigured: false,
-      } as FirebaseAdminService);
+  const original = new Map(
+    ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'FIREBASE_ALLOWED_UIDS'].map(
+      (key) => [key, process.env[key]],
+    ),
+  );
+  try {
+    process.env.TELEGRAM_BOT_TOKEN = 'server-token';
+    process.env.TELEGRAM_CHAT_ID = 'private-chat';
+    const controller = new HealthController({
+      isConfigured: false,
+    } as FirebaseAdminService);
 
-      process.env.FIREBASE_ALLOWED_UIDS = 'user-a,user-b';
-      expect(controller.getHealth().telegramConfigured).toBe(false);
-      process.env.FIREBASE_ALLOWED_UIDS = 'user-a';
-      expect(controller.getHealth().telegramConfigured).toBe(true);
-    } finally {
-      for (const [key, value] of original) {
-        if (value === undefined) delete process.env[key];
-        else process.env[key] = value;
-      }
+    process.env.FIREBASE_ALLOWED_UIDS = 'user-a,user-b';
+    expect(controller.getHealth().telegramConfigured).toBe(false);
+    process.env.FIREBASE_ALLOWED_UIDS = 'user-a';
+    expect(controller.getHealth().telegramConfigured).toBe(true);
+  } finally {
+    for (const [key, value] of original) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
     }
-  });
+  }
+});
 
 describe('AppModule runtime wiring', () => {
   it('boots health-only mode without privileged credentials and never reports secrets', async () => {
