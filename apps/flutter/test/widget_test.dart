@@ -111,6 +111,7 @@ void main() {
       await tester.pumpWidget(const FOPlayerApp());
       final editButton = find.widgetWithText(TextButton, 'Edit entry').first;
       await tester.ensureVisible(editButton);
+      await tester.pumpAndSettle();
       await tester.tap(editButton);
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('entry-price-input')), '0');
