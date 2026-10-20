@@ -214,4 +214,4 @@ Create a GitHub issue titled **“F&O Hedging Decision Dashboard — MVP impleme
 
 
 ## Tracking
-Implementation tracking: [#1](../../issues/1)
+Implementation tracking: [Issue #1 — F&O Hedging Decision Dashboard MVP](https://github.com/NipunCapEx/FOPlayer/issues/1)
