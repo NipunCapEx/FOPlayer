@@ -55,7 +55,7 @@ class StrategyApiClient {
         _baseUrl = (baseUrl ??
                 const String.fromEnvironment('FOPLAYER_API_BASE_URL'))
             .trim()
-            .replaceFirst(RegExp(r'/+
+            .replaceFirst(RegExp(r'/+$'), '');
 
   final FirebaseAuth _auth;
   final http.Client _client;
