@@ -284,9 +284,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _LegendChip(label: '±8% Caution', level: RiskLevel.caution),
-                    _LegendChip(label: '±10% Critical', level: RiskLevel.critical),
-                    _LegendChip(label: '±12% Breached', level: RiskLevel.breached),
+                    _LegendChip(
+                      label: '±8% Caution',
+                      level: RiskLevel.caution,
+                    ),
+                    _LegendChip(
+                      label: '±10% Critical',
+                      level: RiskLevel.critical,
+                    ),
+                    _LegendChip(
+                      label: '±12% Breached',
+                      level: RiskLevel.breached,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -359,12 +368,15 @@ class InstrumentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final level = instrument.riskLevel;
-    final levelLabel = instrument.isStale ? 'DATA STALE' : switch (level) {
-      RiskLevel.normal => 'NORMAL',
-      RiskLevel.caution => 'CAUTION',
-      RiskLevel.critical => 'CRITICAL',
-      RiskLevel.breached => 'BREACHED',
-    };
+    final snapshotTime = instrument.lastUpdated.toString().substring(0, 16);
+    final levelLabel = instrument.isStale
+        ? 'DATA STALE'
+        : switch (level) {
+            RiskLevel.normal => 'NORMAL',
+            RiskLevel.caution => 'CAUTION',
+            RiskLevel.critical => 'CRITICAL',
+            RiskLevel.breached => 'BREACHED',
+          };
     final color = instrument.isStale
         ? Colors.blueGrey
         : switch (level) {
@@ -438,7 +450,8 @@ class InstrumentCard extends StatelessWidget {
                 Text(
                   instrument.isStale
                       ? 'Movement unavailable'
-                      : '${instrument.movementPercent >= 0 ? '+' : ''}${instrument.movementPercent.toStringAsFixed(2)}%',
+                      : '${instrument.movementPercent >= 0 ? '+' : ''}'
+                          '${instrument.movementPercent.toStringAsFixed(2)}%',
                   style: TextStyle(
                     color: instrument.isStale ? Colors.blueGrey : color,
                     fontWeight: FontWeight.bold,
@@ -448,8 +461,14 @@ class InstrumentCard extends StatelessWidget {
             ),
             const Divider(height: 28),
             _PriceRow(label: 'Entry', value: instrument.entryPrice),
-            _PriceRow(label: 'Lower boundary (−12%)', value: instrument.lowerBoundary),
-            _PriceRow(label: 'Upper boundary (+12%)', value: instrument.upperBoundary),
+            _PriceRow(
+              label: 'Lower boundary (−12%)',
+              value: instrument.lowerBoundary,
+            ),
+            _PriceRow(
+              label: 'Upper boundary (+12%)',
+              value: instrument.upperBoundary,
+            ),
             const SizedBox(height: 10),
             if (instrument.isStale)
               const Text(
@@ -458,7 +477,7 @@ class InstrumentCard extends StatelessWidget {
               )
             else
               Text(
-                'Snapshot time: ${instrument.lastUpdated.toString().substring(0, 16)}',
+                'Snapshot time: $snapshotTime',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             Align(
