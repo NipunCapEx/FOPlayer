@@ -137,8 +137,8 @@ class _AlertHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kind = alert.kind.replaceAll('-', ' ').toUpperCase();
-    final timestamp = alert.createdAt?.toString().substring(0, 16) ??
-        'Time unavailable';
+    final timestamp =
+        alert.createdAt?.toString().substring(0, 16) ?? 'Time unavailable';
     final status = alert.status.toLowerCase();
     final icon = switch (status) {
       'delivered' => Icons.check_circle_outline,
