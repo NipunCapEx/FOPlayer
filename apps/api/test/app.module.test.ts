@@ -54,7 +54,7 @@ describe('AppModule runtime wiring', () => {
     const app = await NestFactory.create(AppModule, { logger: false });
     try {
       await app.init();
-      expect(app.get(FirebaseAdminService).isConfigured).toBe(false);
+      expect(app.get(FirebaseAdminService, { strict: false }).isConfigured).toBe(false);
       expect(app.get(HealthController).getHealth()).toEqual({
         status: 'ok',
         service: 'foplayer-api',
