@@ -70,18 +70,23 @@ jobs:
         env:
           FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
           ANDROID_APPLICATION_ID: ${{ vars.ANDROID_APPLICATION_ID }}
+          FOPLAYER_API_BASE_URL: ${{ vars.FOPLAYER_API_BASE_URL }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for key in FIREBASE_GOOGLE_SERVICES_JSON ANDROID_APPLICATION_ID ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+          for key in FIREBASE_GOOGLE_SERVICES_JSON ANDROID_APPLICATION_ID FOPLAYER_API_BASE_URL ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
             if [ -z "${!key}" ]; then
               echo "::error::Missing GitHub secret/variable: $key. Configure it before running a signed release."
               exit 1
             fi
           done
+          case "$FOPLAYER_API_BASE_URL" in
+            https://*) ;;
+            *) echo "::error::FOPLAYER_API_BASE_URL must be an HTTPS URL."; exit 1 ;;
+          esac
           printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON" > android/app/google-services.json
           python3 - <<'PY'
           import json, os
@@ -146,7 +151,7 @@ jobs:
           echo "Release version: $BASE_VERSION.$RUN_NUMBER (versionCode $VERSION_CODE)"
 
       - name: Build signed APK for direct testing
-        run: flutter build apk --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}"
+        run: flutter build apk --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}" --dart-define=FOPLAYER_API_BASE_URL="${{ vars.FOPLAYER_API_BASE_URL }}"
 
       - name: Build signed Android App Bundle for Google Play
         run: flutter build appbundle --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}"

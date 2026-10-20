@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:foplayer/strategy_api.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -134,8 +135,14 @@ class AuthGate extends StatelessWidget {
         if (user == null) {
           return GoogleLoginScreen(onSignIn: () => _signIn(context));
         }
+        final apiClient = StrategyApiClient();
+        if (!apiClient.isConfigured) {
+          return const ApiSetupScreen();
+        }
         return DashboardScreen(
-            onSignOut: () => FirebaseAuth.instance.signOut());
+          apiClient: apiClient,
+          onSignOut: () => FirebaseAuth.instance.signOut(),
+        );
       },
     );
   }
@@ -233,10 +240,42 @@ class FirebaseSetupScreen extends StatelessWidget {
   }
 }
 
+class ApiSetupScreen extends StatelessWidget {
+  const ApiSetupScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.settings_ethernet, size: 56),
+                const SizedBox(height: 16),
+                Text('Backend setup required',
+                    style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                const Text(
+                  'Set FOPLAYER_API_BASE_URL to the deployed HTTPS backend URL when building the app. The authenticated watchlist is not stored locally as a fallback.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, this.onSignOut});
+  const DashboardScreen({super.key, this.onSignOut, this.apiClient});
 
   final VoidCallback? onSignOut;
+  final StrategyApiClient? apiClient;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -281,17 +320,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
         isStale: true,
       ),
     ];
+    if (widget.apiClient != null) _loadPersistedWatchlist();
   }
+
+  Future<void> _loadPersistedWatchlist() async {
+    try {
+      var saved = await widget.apiClient!.listStrategies();
+      if (saved.isEmpty) {
+        for (final item in List<Instrument>.of(instruments)) {
+          saved = [
+            ...saved,
+            await widget.apiClient!.createStrategy(
+              symbol: item.symbol,
+              entryPrice: item.entryPrice,
+            )
+          ];
+        }
+      }
+      if (!mounted) return;
+      final fixtures = {for (final item in instruments) item.symbol: item};
+      setState(() {
+        _strategyIds
+          ..clear()
+          ..addEntries(saved.map((item) => MapEntry(item.symbol, item.id)));
+        instruments = saved.map((item) {
+          final fixture = fixtures[item.symbol];
+          if (fixture == null) {
+            return Instrument(
+              symbol: item.symbol,
+              name: _supportedSymbols[item.symbol] ?? item.symbol,
+              entryPrice: item.entryPrice,
+              spotPrice: item.entryPrice,
+              lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
+              isStale: true,
+            );
+          }
+          return fixture.copyWith(entryPrice: item.entryPrice);
+        }).toList();
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load saved watchlist: $error')),
+        );
+      }
+    }
+  }
+
+  final Map<String, String> _strategyIds = {};
 
   static const _supportedSymbols = <String, String>{
     'RELIANCE': 'Reliance Industries',
     'JSWSTEEL': 'JSW Steel',
     'BHARTIARTL': 'Bharti Airtel',
     'SBICARD': 'SBI Cards',
-    'TCS': 'Tata Consultancy Services',
-    'INFY': 'Infosys',
-    'HDFCBANK': 'HDFC Bank',
-    'ICICIBANK': 'ICICI Bank',
   };
 
   Future<void> _addInstrument() async {
@@ -314,15 +396,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
     if (result == null || !mounted) return;
-    setState(() => instruments = [...instruments, result]);
+    try {
+      final saved = widget.apiClient == null
+          ? null
+          : await widget.apiClient!.createStrategy(
+              symbol: result.symbol,
+              entryPrice: result.entryPrice,
+            );
+      if (!mounted) return;
+      setState(() {
+        instruments = [...instruments, result];
+        if (saved != null) _strategyIds[result.symbol] = saved.id;
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save symbol: $error')),
+        );
+      }
+    }
   }
 
-  void _removeInstrument(Instrument instrument) {
+  Future<void> _removeInstrument(Instrument instrument) async {
+    try {
+      final id = _strategyIds[instrument.symbol];
+      if (widget.apiClient != null && id != null) {
+        await widget.apiClient!.updateStrategy(id, active: false);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not remove symbol: $error')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
     setState(() {
       instruments = instruments
           .where((item) => item.symbol != instrument.symbol)
           .toList();
     });
+    _strategyIds.remove(instrument.symbol);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${instrument.symbol} removed from this dashboard.'),
@@ -336,6 +451,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (dialogContext) => EntryPriceDialog(instrument: instrument),
     );
     if (newEntry == null || !mounted) return;
+    try {
+      final id = _strategyIds[instrument.symbol];
+      if (widget.apiClient != null && id != null) {
+        await widget.apiClient!.updateStrategy(id, entryPrice: newEntry);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save entry price: $error')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
     setState(() {
       instruments = [
         for (final item in instruments)

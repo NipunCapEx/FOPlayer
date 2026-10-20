@@ -148,8 +148,23 @@ void main() {
     testWidgets('adds a supported symbol with a positive entry price',
         (tester) async {
       await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
-      await tester.tap(find.byKey(const Key('add-instrument-button')));
+      final removeButton = find.byKey(const Key('remove-RELIANCE'));
+      await tester.scrollUntilVisible(
+        removeButton,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
+      await tester.tap(removeButton);
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(ListView).first, const Offset(0, 1200));
+      await tester.pumpAndSettle();
+      final addButton = find.byKey(const Key('add-instrument-button'));
+      expect(addButton, findsOneWidget);
+      await tester.tap(addButton);
+      await tester.pumpAndSettle();
+      expect(find.text('RELIANCE'), findsWidgets);
 
       await tester.enterText(
         find.byKey(const Key('new-entry-price-input')),
@@ -158,13 +173,27 @@ void main() {
       await tester.tap(find.byKey(const Key('save-new-symbol-button')));
       await tester.pumpAndSettle();
 
-      expect(find.text('TCS'), findsOneWidget);
+      expect(find.text('RELIANCE'), findsWidgets);
       expect(find.textContaining('DEMO DATA'), findsOneWidget);
     });
 
     testWidgets('rejects invalid entry when adding a symbol', (tester) async {
       await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
-      await tester.tap(find.byKey(const Key('add-instrument-button')));
+      final removeButton = find.byKey(const Key('remove-RELIANCE'));
+      await tester.scrollUntilVisible(
+        removeButton,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(removeButton);
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(ListView).first, const Offset(0, 1200));
+      await tester.pumpAndSettle();
+      final addButton = find.byKey(const Key('add-instrument-button'));
+      expect(addButton, findsOneWidget);
+      await tester.tap(addButton);
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -172,8 +201,10 @@ void main() {
       await tester.tap(find.byKey(const Key('save-new-symbol-button')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Enter a valid positive entry price.'), findsOneWidget);
+      // Invalid input must leave the add dialog open instead of creating a symbol.
+      expect(find.text('Add watchlist symbol'), findsOneWidget);
       expect(find.byKey(const Key('new-entry-price-input')), findsOneWidget);
+      expect(find.byKey(const Key('save-new-symbol-button')), findsOneWidget);
     });
 
     testWidgets('removes a symbol from the active watchlist', (tester) async {
