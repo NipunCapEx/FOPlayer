@@ -158,9 +158,10 @@ void main() {
       await tester.tap(removeButton);
       await tester.pumpAndSettle();
 
-      final addButton = find.byKey(const Key('add-instrument-button'));
-      await tester.ensureVisible(addButton);
+      await tester.drag(find.byType(ListView).first, const Offset(0, 1200));
       await tester.pumpAndSettle();
+      final addButton = find.byKey(const Key('add-instrument-button'));
+      expect(addButton, findsOneWidget);
       await tester.tap(addButton);
       await tester.pumpAndSettle();
       expect(find.text('RELIANCE'), findsWidgets);
@@ -188,9 +189,10 @@ void main() {
       await tester.tap(removeButton);
       await tester.pumpAndSettle();
 
-      final addButton = find.byKey(const Key('add-instrument-button'));
-      await tester.ensureVisible(addButton);
+      await tester.drag(find.byType(ListView).first, const Offset(0, 1200));
       await tester.pumpAndSettle();
+      final addButton = find.byKey(const Key('add-instrument-button'));
+      expect(addButton, findsOneWidget);
       await tester.tap(addButton);
       await tester.pumpAndSettle();
 
