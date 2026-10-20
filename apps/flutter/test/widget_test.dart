@@ -13,7 +13,8 @@ void main() {
     expect(find.text('Continue with Google'), findsOneWidget);
   });
 
-  testWidgets('explains Firebase setup when configuration is missing', (tester) async {
+  testWidgets('explains Firebase setup when configuration is missing',
+      (tester) async {
     await tester.pumpWidget(const FOPlayerApp());
     expect(find.text('Firebase setup required'), findsOneWidget);
     expect(find.textContaining('google-services.json'), findsOneWidget);
