@@ -354,6 +354,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
               isStale: true,
             );
+          }
           return fixture.copyWith(entryPrice: item.entryPrice);
         }).toList();
       });
