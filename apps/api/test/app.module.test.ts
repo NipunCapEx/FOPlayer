@@ -71,7 +71,6 @@ describe('AppModule runtime wiring', () => {
   });
 });
 
-
 describe('special market session configuration', () => {
   it('returns no overrides when the setting is empty', () => {
     expect(readSpecialSessions(undefined)).toEqual({});
@@ -80,9 +79,7 @@ describe('special market session configuration', () => {
 
   it('parses date-specific open and close times', () => {
     expect(
-      readSpecialSessions(
-        '{"2026-11-08":{"open":"18:00","close":"19:00"}}',
-      ),
+      readSpecialSessions('{"2026-11-08":{"open":"18:00","close":"19:00"}}'),
     ).toEqual({
       '2026-11-08': { open: '18:00', close: '19:00' },
     });
@@ -97,9 +94,7 @@ describe('special market session configuration', () => {
 
   it('rejects invalid date keys and invalid session values', () => {
     expect(() =>
-      readSpecialSessions(
-        '{"not-a-date":{"open":"09:00","close":"10:00"}}',
-      ),
+      readSpecialSessions('{"not-a-date":{"open":"09:00","close":"10:00"}}'),
     ).toThrow(
       'Each special market session must use an ISO date and open/close times.',
     );
