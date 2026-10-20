@@ -12,7 +12,10 @@ export interface QuerySnapshotPort {
 export interface DocumentReferencePort {
   readonly id: string;
   get(): Promise<DocumentSnapshotPort>;
-  set(data: Record<string, unknown>, options?: { merge?: boolean }): Promise<unknown>;
+  set(
+    data: Record<string, unknown>,
+    options?: { merge?: boolean },
+  ): Promise<unknown>;
   update(data: Record<string, unknown>): Promise<unknown>;
   create(data: Record<string, unknown>): Promise<unknown>;
 }
