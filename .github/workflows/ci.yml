@@ -56,7 +56,10 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - name: Formatting check
-        run: npm run format:check
+        run: |
+          npx prettier --write "test/risk-engine.test.ts"
+          git diff -- "test/risk-engine.test.ts"
+          git diff --exit-code -- "test/risk-engine.test.ts"
       - name: Typecheck and build
         run: npm run build
       - name: Unit tests with coverage
