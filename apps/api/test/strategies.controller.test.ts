@@ -58,15 +58,15 @@ describe('StrategiesController', () => {
   it('rejects non-object request bodies', async () => {
     const { controller, service } = createController();
 
-    await expect(
-      controller.createStrategy(request, null),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    await expect(
-      controller.updateStrategy(request, 'strategy-1', []),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    await expect(
-      controller.registerDevice(request, null),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(() => controller.createStrategy(request, null)).toThrow(
+      BadRequestException,
+    );
+    expect(() => controller.updateStrategy(request, 'strategy-1', [])).toThrow(
+      BadRequestException,
+    );
+    expect(() => controller.registerDevice(request, null)).toThrow(
+      BadRequestException,
+    );
     expect(service.create).not.toHaveBeenCalled();
     expect(service.update).not.toHaveBeenCalled();
   });
@@ -105,8 +105,8 @@ describe('StrategiesController', () => {
 
   it('rejects calls without verified user context', async () => {
     const { controller } = createController();
-    await expect(
-      controller.listStrategies({ headers: {} }),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(() => controller.listStrategies({ headers: {} })).toThrow(
+      UnauthorizedException,
+    );
   });
 });
