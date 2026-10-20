@@ -23,11 +23,9 @@ afterEach(() => {
   }
   it('reports Telegram configured only for a single allowlisted UID', () => {
     const original = new Map(
-      [
-        'TELEGRAM_BOT_TOKEN',
-        'TELEGRAM_CHAT_ID',
-        'FIREBASE_ALLOWED_UIDS',
-      ].map((key) => [key, process.env[key]]),
+      ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'FIREBASE_ALLOWED_UIDS'].map(
+        (key) => [key, process.env[key]],
+      ),
     );
     try {
       process.env.TELEGRAM_BOT_TOKEN = 'server-token';
