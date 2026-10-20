@@ -104,6 +104,122 @@ DateTime? _parseAlertDate(dynamic value) {
   return null;
 }
 
+class DashboardSnapshot {
+  const DashboardSnapshot({
+    required this.strategyId,
+    required this.symbol,
+    required this.entryPrice,
+    required this.spotPrice,
+    required this.movementPercent,
+    required this.level,
+    required this.source,
+    required this.exchangeTimestamp,
+    required this.fetchedAt,
+    required this.recordedAt,
+  });
+
+  final String strategyId;
+  final String symbol;
+  final double entryPrice;
+  final double spotPrice;
+  final double movementPercent;
+  final String level;
+  final String source;
+  final DateTime exchangeTimestamp;
+  final DateTime fetchedAt;
+  final DateTime recordedAt;
+
+  bool isFreshAt(DateTime now) {
+    const maxAge = Duration(minutes: 10);
+    const maxFutureSkew = Duration(minutes: 1);
+    final fetchAge = now.difference(fetchedAt);
+    final exchangeAge = now.difference(exchangeTimestamp);
+    return fetchAge <= maxAge &&
+        fetchAge >= -maxFutureSkew &&
+        exchangeAge <= maxAge &&
+        exchangeAge >= -maxFutureSkew;
+  }
+
+  factory DashboardSnapshot.fromJson(Map<String, dynamic> json) {
+    final strategyId = json['strategyId'];
+    final source = json['source'];
+    final assessment = json['assessment'];
+    if (strategyId is! String ||
+        source is! String ||
+        assessment is! Map<String, dynamic>) {
+      throw const FormatException('Invalid dashboard snapshot.');
+    }
+    final symbol = assessment['symbol'];
+    final entryPrice = assessment['entryPrice'];
+    final spotPrice = assessment['spotPrice'];
+    final movementPercent = assessment['movementPercent'];
+    final level = assessment['level'];
+    final exchangeTimestamp = _parseAlertDate(json['exchangeTimestamp']);
+    final fetchedAt = _parseAlertDate(json['fetchedAt']);
+    final recordedAt = _parseAlertDate(json['recordedAt']);
+    if (symbol is! String ||
+        entryPrice is! num ||
+        spotPrice is! num ||
+        movementPercent is! num ||
+        level is! String ||
+        exchangeTimestamp == null ||
+        fetchedAt == null ||
+        recordedAt == null ||
+        !entryPrice.toDouble().isFinite ||
+        entryPrice <= 0 ||
+        !spotPrice.toDouble().isFinite ||
+        spotPrice <= 0 ||
+        !movementPercent.toDouble().isFinite) {
+      throw const FormatException('Invalid dashboard snapshot values.');
+    }
+    return DashboardSnapshot(
+      strategyId: strategyId,
+      symbol: symbol,
+      entryPrice: entryPrice.toDouble(),
+      spotPrice: spotPrice.toDouble(),
+      movementPercent: movementPercent.toDouble(),
+      level: level,
+      source: source,
+      exchangeTimestamp: exchangeTimestamp,
+      fetchedAt: fetchedAt,
+      recordedAt: recordedAt,
+    );
+  }
+}
+
+class UserDashboard {
+  const UserDashboard({
+    required this.strategies,
+    required this.snapshots,
+  });
+
+  final List<UserStrategy> strategies;
+  final Map<String, DashboardSnapshot> snapshots;
+
+  factory UserDashboard.fromJson(Map<String, dynamic> json) {
+    final rawStrategies = json['strategies'];
+    final rawSnapshots = json['snapshots'];
+    if (rawStrategies is! List || rawSnapshots is! List) {
+      throw const FormatException('Invalid dashboard response.');
+    }
+    final strategies = rawStrategies.map((value) {
+      if (value is! Map<String, dynamic>) {
+        throw const FormatException('Invalid dashboard strategy.');
+      }
+      return UserStrategy.fromJson(value);
+    }).where((strategy) => strategy.active).toList();
+    final snapshots = <String, DashboardSnapshot>{};
+    for (final value in rawSnapshots) {
+      if (value is! Map<String, dynamic>) {
+        throw const FormatException('Invalid dashboard snapshot item.');
+      }
+      final snapshot = DashboardSnapshot.fromJson(value);
+      snapshots[snapshot.strategyId] = snapshot;
+    }
+    return UserDashboard(strategies: strategies, snapshots: snapshots);
+  }
+}
+
 class StrategyApiException implements Exception {
   const StrategyApiException(this.message);
 
@@ -129,6 +245,14 @@ class StrategyApiClient {
   final String _baseUrl;
 
   bool get isConfigured => _baseUrl.startsWith('https://');
+
+  Future<UserDashboard> getDashboard() async {
+    final response = await _request('GET', '/api/dashboard');
+    if (response is! Map<String, dynamic>) {
+      throw const StrategyApiException('Unexpected dashboard response.');
+    }
+    return UserDashboard.fromJson(response);
+  }
 
   Future<List<UserStrategy>> listStrategies() async {
     final response = await _request('GET', '/api/strategies');
