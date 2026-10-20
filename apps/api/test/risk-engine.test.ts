@@ -53,7 +53,13 @@ describe('assessRisk — business outcomes', () => {
     );
   });
 
-  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+  it.each([
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ])(
     'rejects invalid spot price %s instead of showing normal risk',
     (spotPrice) => {
       expect(() => assess(spotPrice)).toThrow(InvalidRiskInputError);
