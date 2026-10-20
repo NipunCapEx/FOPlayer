@@ -19,48 +19,49 @@ void main() {
       );
     });
 
-    testWidgets('labels an 8% move as caution and a 12% move as breached',
-        (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-              InstrumentCard(
-                instrument: Instrument(
-                  symbol: 'CAUTION',
-                  name: 'Threshold fixture',
-                  entryPrice: 100,
-                  spotPrice: 108,
-                  lastUpdated: DateTime(2026, 10, 20),
-                ),
-                onEditEntry: _noop,
+    testWidgets('labels both ±12% boundaries as breached', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  InstrumentCard(
+                    instrument: Instrument(
+                      symbol: 'CAUTION',
+                      name: 'Threshold fixture',
+                      entryPrice: 100,
+                      spotPrice: 108,
+                      lastUpdated: DateTime(2026, 10, 20),
+                    ),
+                    onEditEntry: _noop,
+                  ),
+                  InstrumentCard(
+                    instrument: Instrument(
+                      symbol: 'UPPER-BREACH',
+                      name: 'Upper boundary fixture',
+                      entryPrice: 100,
+                      spotPrice: 112,
+                      lastUpdated: DateTime(2026, 10, 20),
+                    ),
+                    onEditEntry: _noop,
+                  ),
+                  InstrumentCard(
+                    instrument: Instrument(
+                      symbol: 'LOWER-BREACH',
+                      name: 'Lower boundary fixture',
+                      entryPrice: 100,
+                      spotPrice: 88,
+                      lastUpdated: DateTime(2026, 10, 20),
+                    ),
+                    onEditEntry: _noop,
+                  ),
+                ],
               ),
-              InstrumentCard(
-                instrument: Instrument(
-                  symbol: 'UPPER-BREACH',
-                  name: 'Upper boundary fixture',
-                  entryPrice: 100,
-                  spotPrice: 112,
-                  lastUpdated: DateTime(2026, 10, 20),
-                ),
-                onEditEntry: _noop,
-              ),
-              InstrumentCard(
-                instrument: Instrument(
-                  symbol: 'LOWER-BREACH',
-                  name: 'Lower boundary fixture',
-                  entryPrice: 100,
-                  spotPrice: 88,
-                  lastUpdated: DateTime(2026, 10, 20),
-                ),
-                onEditEntry: _noop,
-              ),
-              ],
             ),
           ),
         ),
-      ));
+      );
 
       expect(find.text('CAUTION'), findsWidgets);
       expect(find.text('BREACHED'), findsNWidgets(2));
@@ -71,8 +72,10 @@ void main() {
       await tester.pumpWidget(const FOPlayerApp());
 
       expect(find.text('DATA STALE'), findsOneWidget);
-      expect(find.text('Snapshot is stale. No actionable risk state is shown.'),
-          findsOneWidget);
+      expect(
+        find.text('Snapshot is stale. No actionable risk state is shown.'),
+        findsOneWidget,
+      );
       expect(find.text('Movement unavailable'), findsOneWidget);
     });
 
@@ -95,6 +98,7 @@ void main() {
       expect(find.text('₹880.00'), findsOneWidget);
       expect(find.text('₹1120.00'), findsOneWidget);
     });
+
     test('uses the critical level at exactly 10% in either direction', () {
       for (final spot in [110.0, 90.0]) {
         final instrument = Instrument(
