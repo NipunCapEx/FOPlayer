@@ -167,7 +167,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('RELIANCE'), findsNothing);
-      expect(find.text('RELIANCE removed from this dashboard.'), findsOneWidget);
+      expect(
+        find.text('RELIANCE removed from this dashboard.'),
+        findsOneWidget,
+      );
     });
   });
 }
