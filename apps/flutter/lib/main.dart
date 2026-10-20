@@ -1,7 +1,20 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-void main() {
-  runApp(const FOPlayerApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  Object? initializationError;
+  try {
+    await Firebase.initializeApp();
+  } catch (error) {
+    initializationError = error;
+  }
+  runApp(FOPlayerApp(
+    firebaseReady: initializationError == null,
+    initializationError: initializationError?.toString(),
+  ));
 }
 
 enum RiskLevel { normal, caution, critical, breached }
@@ -48,7 +61,16 @@ class Instrument {
 }
 
 class FOPlayerApp extends StatelessWidget {
-  const FOPlayerApp({super.key});
+  const FOPlayerApp({
+    super.key,
+    this.firebaseReady = false,
+    this.initializationError,
+    this.prototypeMode = false,
+  });
+
+  final bool firebaseReady;
+  final String? initializationError;
+  final bool prototypeMode;
 
   @override
   Widget build(BuildContext context) {
@@ -60,13 +82,161 @@ class FOPlayerApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF7F8FA),
       ),
-      home: const DashboardScreen(),
+      home: prototypeMode
+          ? const DashboardScreen()
+          : firebaseReady
+              ? const AuthGate()
+              : FirebaseSetupScreen(error: initializationError),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  Future<void> _signIn(BuildContext context) async {
+    try {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return;
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+    } on FirebaseAuthException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Google sign-in failed.')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Unable to sign in with Google. Check Firebase OAuth setup.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        final user = snapshot.data;
+        if (user == null) {
+          return GoogleLoginScreen(onSignIn: () => _signIn(context));
+        }
+        return DashboardScreen(
+            onSignOut: () => FirebaseAuth.instance.signOut());
+      },
+    );
+  }
+}
+
+class GoogleLoginScreen extends StatelessWidget {
+  const GoogleLoginScreen({super.key, required this.onSignIn});
+
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.show_chart, size: 64),
+                  const SizedBox(height: 16),
+                  Text('FnO Players',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text(
+                      'Sign in to access your personal hedging dashboard.',
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    key: const Key('google-sign-in-button'),
+                    onPressed: onSignIn,
+                    icon: const Icon(Icons.login),
+                    label: const Text('Continue with Google'),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                      'Demo market values are illustrative and are not trading advice.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FirebaseSetupScreen extends StatelessWidget {
+  const FirebaseSetupScreen({super.key, this.error});
+
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off_outlined, size: 56),
+                  const SizedBox(height: 16),
+                  Text('Firebase setup required',
+                      style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 8),
+                  const Text(
+                      'FnO Players needs its own Firebase Android app and Google sign-in configuration before you can sign in. Configure google-services.json and enable Google in Firebase Authentication.'),
+                  if (error != null) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                        'Initialization details are available in the app logs.',
+                        style: TextStyle(fontSize: 12)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({super.key, this.onSignOut});
+
+  final VoidCallback? onSignOut;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -188,6 +358,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('FnO Players'),
         actions: [
+          if (widget.onSignOut != null)
+            IconButton(
+              tooltip: 'Sign out',
+              onPressed: widget.onSignOut,
+              icon: const Icon(Icons.logout),
+            ),
           const Padding(
             padding: EdgeInsets.only(right: 16),
             child: Center(
