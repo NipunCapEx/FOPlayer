@@ -161,13 +161,13 @@ void main() {
 
     testWidgets('removes a symbol from the active watchlist', (tester) async {
       await tester.pumpWidget(const FOPlayerApp());
-      final removeButton = find.byKey(const Key('remove-SBICARD'));
+      final removeButton = find.byKey(const Key('remove-RELIANCE'));
       await tester.ensureVisible(removeButton);
       await tester.tap(removeButton);
       await tester.pumpAndSettle();
 
-      expect(find.text('SBICARD'), findsNothing);
-      expect(find.text('SBICARD removed from this dashboard.'), findsOneWidget);
+      expect(find.text('RELIANCE'), findsNothing);
+      expect(find.text('RELIANCE removed from this dashboard.'), findsOneWidget);
     });
   });
 }
