@@ -211,3 +211,7 @@ Planning estimate: 5.5–8 working days for one developer already familiar with 
 ## 13. Tracking issue
 
 Create a GitHub issue titled **“F&O Hedging Decision Dashboard — MVP implementation plan”** with this document's PR breakdown, acceptance criteria, dependencies/licensing, CI gates and definition of done. Link this document in the issue and update both as implementation changes.
+
+
+## Tracking
+Implementation tracking: [#1](../../issues/1)
