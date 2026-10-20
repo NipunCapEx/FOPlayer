@@ -10,7 +10,7 @@ export class MonitoringRunner implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
-    if (this.firebase.isConfigured) this.worker.start();
+    if (this.firebase?.isConfigured) this.worker.start();
   }
 
   onModuleDestroy(): void {
