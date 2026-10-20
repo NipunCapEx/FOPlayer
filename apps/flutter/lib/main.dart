@@ -1055,7 +1055,7 @@ class InstrumentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final level = instrument.riskLevel;
     final snapshotTime = instrument.lastUpdated.toString().substring(0, 16);
-    final levelLabel = instrument.isStale
+    final levelLabel = instrument.isCurrentlyStale
         ? 'DATA STALE'
         : switch (level) {
             RiskLevel.normal => 'NORMAL',
@@ -1063,7 +1063,7 @@ class InstrumentCard extends StatelessWidget {
             RiskLevel.critical => 'CRITICAL',
             RiskLevel.breached => 'BREACHED',
           };
-    final color = instrument.isStale
+    final color = instrument.isCurrentlyStale
         ? Colors.blueGrey
         : switch (level) {
             RiskLevel.normal => Colors.green.shade700,
@@ -1129,7 +1129,7 @@ class InstrumentCard extends StatelessWidget {
                         isDemo
                             ? 'Demo spot'
                             : instrument.hasSpotPrice
-                                ? instrument.isStale
+                                ? instrument.isCurrentlyStale
                                     ? 'Last observed spot'
                                     : 'Spot'
                                 : 'Spot price',
@@ -1144,12 +1144,12 @@ class InstrumentCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  instrument.isStale
+                  instrument.isCurrentlyStale
                       ? 'Movement unavailable'
                       : '${instrument.movementPercent >= 0 ? '+' : ''}'
                           '${instrument.movementPercent.toStringAsFixed(2)}%',
                   style: TextStyle(
-                    color: instrument.isStale ? Colors.blueGrey : color,
+                    color: instrument.isCurrentlyStale ? Colors.blueGrey : color,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1166,7 +1166,7 @@ class InstrumentCard extends StatelessWidget {
               value: instrument.upperBoundary,
             ),
             const SizedBox(height: 10),
-            if (instrument.isStale)
+            if (instrument.isCurrentlyStale)
               Text(
                 isDemo
                     ? 'Snapshot is stale. No actionable risk state is shown.'
