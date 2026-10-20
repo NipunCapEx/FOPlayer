@@ -48,8 +48,17 @@ jobs:
       - name: Generate Android project with the production application ID
         run: |
           set -euo pipefail
+          # Discard only generated Android scaffolding when it still references the removed v1 embedding.
+          if grep -R -E 'io\.flutter\.app\.FlutterActivity|io\.flutter\.app\.FlutterApplication|GeneratedPluginRegistrant\.registerWith' android/app/src/main 2>/dev/null; then
+            echo "Detected deprecated Android v1 embedding; regenerating Android platform files."
+            rm -rf android
+          fi
           if [ ! -f android/app/build.gradle.kts ] && [ ! -f android/app/build.gradle ]; then
             flutter create --platforms=android --org com.nipun.finance --project-name fno .
+          fi
+          if grep -R -n -E 'io\.flutter\.app\.FlutterActivity|io\.flutter\.app\.FlutterApplication|GeneratedPluginRegistrant\.registerWith' android/app/src/main 2>/dev/null; then
+            echo "::error::Deprecated Android v1 embedding remains after scaffolding generation."
+            exit 1
           fi
           sed -i 's/android:label="[^"]*"/android:label="FnO Players"/' android/app/src/main/AndroidManifest.xml
           grep -q 'com.nipun.finance.fno' android/app/build.gradle.kts android/app/build.gradle 2>/dev/null || {
