@@ -15,6 +15,10 @@ The product provides price monitoring, risk calculations, and Telegram/Android n
 
 Python, Redis, PostgreSQL/Prisma, and microservices are not required for the MVP absent a demonstrated need.
 
+## Implementation status
+
+The merged Flutter dashboard currently displays clearly labelled demo fixtures. Monitoring and notification core logic is being added with deterministic tests; Firebase/Firestore persistence, authenticated API wiring and deployment are not yet complete. Do not use demo prices for trading decisions or treat this repository state as a production alerting service.
+
 ## Specification
 
 See [F&O Hedging Dashboard implementation plan](docs/architecture/fno-hedging-dashboard.md) for architecture, risk formulas, dependencies and licensing constraints, implementation PRs, acceptance criteria, CI gates, and release checklist.

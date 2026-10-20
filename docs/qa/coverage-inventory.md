@@ -1,6 +1,6 @@
 # FOPlayer QA Coverage Inventory
 
-Updated: 2026-10-20 (PR 2 dashboard work)
+Updated: 2026-10-20 (Milestone 3 monitoring core)
 
 Status labels: **Implemented & verified**, **Implemented, verification pending**, **Planned**, **Blocked**. Never mark a capability verified without a test/run result tied to a commit.
 
@@ -9,18 +9,18 @@ Status labels: **Implemented & verified**, **Implemented, verification pending**
 | Entry-relative ±12% boundaries | Unit tests for upper/lower, exact boundary and adjacent values | Implemented & verified | PR 1 CI passed on `e8eb806093ec1c7757c8e1c5dc805e2616962d09` |
 | ±8% caution and ±10% critical severity | Unit tests both directions, threshold precedence | Implemented & verified | PR 1 CI passed on `e8eb806093ec1c7757c8e1c5dc805e2616962d09` |
 | Invalid/missing prices and entries | Unit tests reject non-positive/non-finite values | Implemented & verified | PR 1 CI passed on `e8eb806093ec1c7757c8e1c5dc805e2616962d09` |
-| Stale/out-of-order snapshots | Unit + adapter integration tests; no actionable fresh alert | Planned | Add freshness policy and tests |
+| Stale/out-of-order snapshots | Reject stale fetch and exchange timestamps, future timestamps, invalid prices; no fresh assessment/alert | Implemented, verification pending | `market-data.test.ts`, `monitoring.test.ts` |
 | Four supported symbols | Domain validation tests | Planned | Add strategy model and API |
 | Authentication and server-side authorization | API integration tests for unauthenticated/unauthorized requests | Planned | Firebase Auth integration |
 | Firestore rules and persistence | Emulator tests; cross-user access denied | Planned | Dedicated Firebase project/config |
-| Provider adapter reliability | Contract tests, timeout/error/retry handling | Planned | Add replaceable adapter |
-| Five-minute monitoring | Scheduler tests with fake clock; no duplicate runs | Planned | PR 3 |
-| Alert deduplication/re-arm | Repeated poll, crossing, recovery and re-cross tests | Planned | PR 3 |
-| Telegram notification | Adapter contract tests and failure/retry tests | Planned | PR 3 |
-| Android FCM | Adapter contract and delivery status tests | Planned | PR 3 |
+| Free provider adapter reliability | Yahoo chart adapter contract, ticker mapping, daily-history cache and HTTP error handling | Implemented, verification pending | `market-data.test.ts`; unofficial provider caveats documented |
+| Five-minute market-hours polling | Configurable 5-minute worker, overlap guard, weekday 09:15–15:30 IST gate | Implemented, verification pending | `isIndianEquityMarketOpen` tests; holiday calendar not included |
+| Alert deduplication/re-arm | Stable idempotency keys, severity escalation, recovery episodes persisted via repository contract, retry pending outbox | Implemented, verification pending | `monitoring.test.ts`; production repository adapter still required |
+| Telegram notification | Bot API transport, HTTP/API error handling and outbox retry contract | Implemented, verification pending | `notifications.test.ts`; secrets supplied by server configuration |
+| Android FCM | FCM HTTP v1 sender, token-provider contract, per-device retry behavior | Implemented, verification pending | `notifications.test.ts`; credential/token provider and device-token persistence required |
 | Flutter dashboard cards, demo warning and stale state | Widget tests for four tickers, thresholds, stale data and entry validation | Implemented, verification pending | PR 2: await exact-head Flutter CI |
-| Critical user journey | E2E configure strategy -> snapshot -> risk -> alert | Planned | Add when UI/API are connected |
-| Responsive Flutter Web build and Android release build | Flutter analyze/test/web build; Android release build | Implemented in CI, verification pending | Web build on PR 2; Android release is manual |
+| Critical user journey | Configure strategy -> provider snapshot -> risk -> outbox -> notification | Planned | API/runtime and persistence integration still required |
+| Responsive Flutter Web build and Android release build | Flutter analyze/test/web build; Android release build | Implemented in CI, verification pending | Dashboard follow-up PR fixes missing web platform scaffolding; Android release is manual |
 | Release smoke / rollback | Health/auth/freshness/alert smoke and rollback procedure | Planned | Release runbook |
 
 ## Business-value test principles
