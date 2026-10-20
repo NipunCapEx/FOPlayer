@@ -21,7 +21,9 @@ afterEach(() => {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
-  it('reports Telegram configured only for a single allowlisted UID', () => {
+});
+
+it('reports Telegram configured only for a single allowlisted UID', () => {
     const original = new Map(
       ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'FIREBASE_ALLOWED_UIDS'].map(
         (key) => [key, process.env[key]],
@@ -45,8 +47,6 @@ afterEach(() => {
       }
     }
   });
-
-});
 
 describe('AppModule runtime wiring', () => {
   it('boots health-only mode without privileged credentials and never reports secrets', async () => {
