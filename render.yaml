@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: foplayer-api
+    runtime: node
+    plan: free
+    rootDir: apps/api
+    buildCommand: npm install --no-audit --no-fund && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: FIREBASE_ALLOWED_UIDS
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: FOPLAYER_MARKET_HOLIDAYS
+        value: ""
+      - key: FOPLAYER_MARKET_OPEN
+        value: "09:15"
+      - key: FOPLAYER_MARKET_CLOSE
+        value: "15:30"
+      - key: FOPLAYER_MARKET_SPECIAL_SESSIONS
+        value: "{}"
