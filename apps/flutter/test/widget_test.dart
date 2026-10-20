@@ -3,10 +3,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:foplayer/main.dart';
 
 void main() {
+  testWidgets('shows Google login entry point', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GoogleLoginScreen(onSignIn: () {}),
+      ),
+    );
+    expect(find.text('FnO Players'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+  });
+
+  testWidgets('explains Firebase setup when configuration is missing', (tester) async {
+    await tester.pumpWidget(const FOPlayerApp());
+    expect(find.text('Firebase setup required'), findsOneWidget);
+    expect(find.textContaining('google-services.json'), findsOneWidget);
+  });
+
   group('FOPlayer dashboard business outcomes', () {
     testWidgets('shows all four configured instruments and demo-data warning',
         (tester) async {
-      await tester.pumpWidget(const FOPlayerApp());
+      await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
 
       expect(find.text('RELIANCE'), findsOneWidget);
       expect(find.text('JSWSTEEL'), findsOneWidget);
@@ -69,7 +85,7 @@ void main() {
 
     testWidgets('makes stale data explicit and suppresses movement display',
         (tester) async {
-      await tester.pumpWidget(const FOPlayerApp());
+      await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
 
       expect(find.text('DATA STALE'), findsOneWidget);
       expect(
@@ -81,7 +97,7 @@ void main() {
 
     testWidgets('entry edit recalculates boundaries for the selected ticker',
         (tester) async {
-      await tester.pumpWidget(const FOPlayerApp());
+      await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
       final editButton = find.widgetWithText(TextButton, 'Edit entry').first;
       await tester.ensureVisible(editButton);
       await tester.pumpAndSettle();
@@ -114,7 +130,7 @@ void main() {
 
     testWidgets('rejects non-positive entry values at the dialog boundary',
         (tester) async {
-      await tester.pumpWidget(const FOPlayerApp());
+      await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
       final editButton = find.widgetWithText(TextButton, 'Edit entry').first;
       await tester.ensureVisible(editButton);
       await tester.pumpAndSettle();
@@ -130,7 +146,7 @@ void main() {
 
     testWidgets('adds a supported symbol with a positive entry price',
         (tester) async {
-      await tester.pumpWidget(const FOPlayerApp());
+      await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
       await tester.tap(find.byKey(const Key('add-instrument-button')));
       await tester.pumpAndSettle();
 
@@ -146,7 +162,7 @@ void main() {
     });
 
     testWidgets('rejects invalid entry when adding a symbol', (tester) async {
-      await tester.pumpWidget(const FOPlayerApp());
+      await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
       await tester.tap(find.byKey(const Key('add-instrument-button')));
       await tester.pumpAndSettle();
 
@@ -160,7 +176,7 @@ void main() {
     });
 
     testWidgets('removes a symbol from the active watchlist', (tester) async {
-      await tester.pumpWidget(const FOPlayerApp());
+      await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
       final removeButton = find.byKey(const Key('remove-RELIANCE'));
       await tester.scrollUntilVisible(
         removeButton,
