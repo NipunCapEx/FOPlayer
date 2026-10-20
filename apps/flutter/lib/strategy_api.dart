@@ -36,6 +36,74 @@ class UserStrategy {
   }
 }
 
+class UserAlert {
+  const UserAlert({
+    required this.id,
+    required this.symbol,
+    required this.kind,
+    required this.message,
+    required this.price,
+    required this.movementPercent,
+    required this.createdAt,
+    required this.status,
+  });
+
+  final String id;
+  final String symbol;
+  final String kind;
+  final String message;
+  final double price;
+  final double movementPercent;
+  final DateTime? createdAt;
+  final String status;
+
+  factory UserAlert.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final symbol = json['symbol'];
+    final kind = json['kind'];
+    final message = json['message'];
+    final price = json['price'];
+    final movementPercent = json['movementPercent'];
+    final status = json['status'];
+    if (id is! String ||
+        symbol is! String ||
+        kind is! String ||
+        message is! String ||
+        price is! num ||
+        movementPercent is! num ||
+        status is! String) {
+      throw const FormatException('Invalid alert returned by the API.');
+    }
+    return UserAlert(
+      id: id,
+      symbol: symbol,
+      kind: kind,
+      message: message,
+      price: price.toDouble(),
+      movementPercent: movementPercent.toDouble(),
+      createdAt: _parseAlertDate(json['createdAt']),
+      status: status,
+    );
+  }
+}
+
+DateTime? _parseAlertDate(dynamic value) {
+  if (value is String) {
+    return DateTime.tryParse(value)?.toLocal();
+  }
+  if (value is num) {
+    return DateTime.fromMillisecondsSinceEpoch(value.toInt()).toLocal();
+  }
+  if (value is Map<String, dynamic>) {
+    final seconds = value['seconds'] ?? value['_seconds'];
+    if (seconds is num) {
+      final milliseconds = seconds.toInt() * 1000;
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds).toLocal();
+    }
+  }
+  return null;
+}
+
 class StrategyApiException implements Exception {
   const StrategyApiException(this.message);
 
@@ -76,6 +144,19 @@ class StrategyApiClient {
         })
         .where((strategy) => strategy.active)
         .toList();
+  }
+
+  Future<List<UserAlert>> listAlerts() async {
+    final response = await _request('GET', '/api/alerts');
+    if (response is! List) {
+      throw const StrategyApiException('Unexpected alerts response.');
+    }
+    return response.map((value) {
+      if (value is! Map<String, dynamic>) {
+        throw const FormatException('Invalid alert response item.');
+      }
+      return UserAlert.fromJson(value);
+    }).toList();
   }
 
   Future<UserStrategy> createStrategy({

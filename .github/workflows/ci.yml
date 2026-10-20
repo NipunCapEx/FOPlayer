@@ -102,7 +102,7 @@ jobs:
             exit 0
           fi
           dart format .
-          git --no-pager diff -- lib/main.dart test/widget_test.dart
+          git --no-pager diff -- '*.dart'
           exit 1
       - working-directory: apps/flutter
         if: steps.flutter.outputs.available == 'true'

@@ -11,10 +11,10 @@ Build a decision-support dashboard for a monthly F&O short-strangle hedging stra
 
 ## 1A. Implementation status (2026-10-20)
 
-- **Merged:** TypeScript risk calculations and the Flutter dashboard shell for four symbols. The dashboard is explicitly demo-only until the live API is connected.
+- **Merged:** TypeScript risk calculations and the Flutter dashboard shell for four symbols. Displayed market prices remain demo fixtures and must not be treated as live.
 - **Merged:** validated Yahoo Finance prototype adapter, freshness checks, monitoring orchestration, market-hours polling, threshold escalation, daily-move and historical-volatility signals, Telegram/FCM transport contracts, and retryable alert outbox interfaces.
-- **Under implementation:** NestJS HTTP/runtime, Firebase ID-token verification, owner-scoped Firestore repositories, strategy/alert/device-token endpoints, and server-side runtime configuration.
-- **Still pending after this milestone:** connect the Flutter dashboard to the authenticated API, implement live loading/error states and alert history, deploy an always-on worker, and complete real Firebase/FCM smoke tests. Do not represent the dashboard as live until these are complete and verified.
+- **Merged in the API/client:** NestJS runtime, Firebase ID-token verification, owner-scoped Firestore strategy and alert endpoints, authenticated watchlist persistence, and a Flutter alert-history screen with loading, empty, retry, and delivery-status states.
+- **Still pending:** connect validated live market snapshots to the Flutter cards with explicit loading/error/freshness states, deploy and verify an always-on worker, configure production HTTPS/Firebase values, and complete real Firebase/FCM smoke tests. Do not represent the dashboard prices as live until these are complete and verified.
 - **Market-hours gate:** weekdays 09:15–15:30 Asia/Kolkata; this does not account for exchange holidays or special sessions and must be made configurable before production.
 - **Notification retry scope:** successful channels/devices are not resent on retries within the same worker process. The persistent repository must store delivery state and risk-episode state so this guarantee survives restarts.
 

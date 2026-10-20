@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'alert_history.dart';
 import 'package:foplayer/strategy_api.dart';
 
 Future<void> main() async {
@@ -487,6 +488,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('FnO Players'),
         actions: [
+          if (widget.apiClient != null)
+            IconButton(
+              key: const Key('open-alert-history-button'),
+              tooltip: 'Alert history',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AlertHistoryScreen(
+                      loadAlerts: widget.apiClient!.listAlerts,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.notifications_outlined),
+            ),
           if (widget.onSignOut != null)
             IconButton(
               tooltip: 'Sign out',
