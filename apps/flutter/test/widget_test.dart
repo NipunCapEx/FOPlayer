@@ -149,7 +149,12 @@ void main() {
         (tester) async {
       await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
       final removeButton = find.byKey(const Key('remove-RELIANCE'));
-      await tester.ensureVisible(removeButton);
+      await tester.scrollUntilVisible(
+        removeButton,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(removeButton);
       await tester.pumpAndSettle();
 
@@ -171,7 +176,12 @@ void main() {
     testWidgets('rejects invalid entry when adding a symbol', (tester) async {
       await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
       final removeButton = find.byKey(const Key('remove-RELIANCE'));
-      await tester.ensureVisible(removeButton);
+      await tester.scrollUntilVisible(
+        removeButton,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(removeButton);
       await tester.pumpAndSettle();
 
