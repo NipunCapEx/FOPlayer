@@ -45,6 +45,9 @@ describe('assessRisk — business outcomes', () => {
   it('distinguishes movement from boundary distance', () => {
     const result = assess(1_050);
     expect(result.movementPercent).toBeCloseTo(5);
+    expect(result.lowerBoundaryDistancePercent).toBeCloseTo(
+      ((1_050 - 880) / 1_050) * 100,
+    );
     expect(result.upperBoundaryDistancePercent).toBeCloseTo(
       ((1_120 - 1_050) / 1_050) * 100,
     );
@@ -75,14 +78,11 @@ describe('assessRisk — business outcomes', () => {
     Number.POSITIVE_INFINITY,
     undefined as unknown as number,
     null as unknown as number,
-  ])(
-    'rejects invalid entry price %s',
-    (entryPrice) => {
-      expect(() =>
-        assessRisk({ symbol, entryPrice, spotPrice: 1_000 }),
-      ).toThrow(InvalidRiskInputError);
-    },
-  );
+  ])('rejects invalid entry price %s', (entryPrice) => {
+    expect(() =>
+      assessRisk({ symbol, entryPrice, spotPrice: 1_000 }),
+    ).toThrow(InvalidRiskInputError);
+  });
 
   it('supports every symbol in the approved MVP scope', () => {
     for (const supportedSymbol of [
