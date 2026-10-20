@@ -9,7 +9,7 @@ The app's semantic base version is maintained in `apps/flutter/pubspec.yaml`. Th
 Configure these before running **Actions → Android Release → Run workflow**:
 
 Repository variable:
-- `ANDROID_APPLICATION_ID`: the exact Android package name registered in the new Firebase project and Google Play Console (for example, `com.nipuncapex.foplayer` only if that is the package you choose).
+- `ANDROID_APPLICATION_ID`: `com.nipun.finance.fno` (must match Firebase and Google Play Console).
 
 Repository secrets:
 - `FIREBASE_GOOGLE_SERVICES_JSON`: complete contents of the new project's Android `google-services.json`, registered for the same package name.
@@ -21,7 +21,7 @@ Repository secrets:
 
 ## Firebase Google login setup
 
-1. Create a Firebase project and register the Android app using the same application ID as the release variable.
+1. Create a Firebase project and register the Android app using application ID `com.nipun.finance.fno`.
 2. Enable **Authentication → Sign-in method → Google**.
 3. Add the debug and release signing-certificate SHA-1 and SHA-256 fingerprints in Firebase project settings.
 4. Download the updated `google-services.json` after OAuth is configured and store its contents in the repository secret above.
@@ -39,5 +39,5 @@ Repository secrets:
 ## Important
 
 - Do not publish while Firebase/OAuth setup is incomplete.
-- Use the same application ID and signing key for all updates to the same Play Store app.
+- Use `com.nipun.finance.fno` and signing key for all updates to the same Play Store app.
 - Market data and alert behavior must be verified separately; a successful app build is not proof that live market data is configured.
