@@ -12,10 +12,9 @@ import {
   FcmTransport,
   MultiChannelDispatcher,
   TelegramTransport,
-  type AlertDispatcher,
   type NotificationTransport,
 } from './notifications.js';
-import { PollingWorker, RiskMonitor } from './monitoring.js';
+import { PollingWorker, RiskMonitor, type AlertDispatcher } from './monitoring.js';
 import { MonitoringRunner } from './monitoring.runner.js';
 import { StrategiesController } from './strategies.controller.js';
 import { StrategyService } from './strategy.service.js';
