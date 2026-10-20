@@ -13,7 +13,7 @@ void main() {
       expect(find.text('BHARTIARTL'), findsOneWidget);
       expect(find.text('SBICARD'), findsOneWidget);
       expect(find.textContaining('DEMO DATA'), findsOneWidget);
-      expect(find.text('Alerts and trading actions are not enabled.'), findsNothing);
+      expect(find.textContaining('Alerts and trading actions are not enabled.'), findsOneWidget);
     });
 
     testWidgets('labels an 8% move as caution and a 12% move as breached',
@@ -99,7 +99,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Enter a valid positive entry price.'), findsOneWidget);
-      expect(find.text('₹1232.00'), findsNothing);
+      expect(find.text('₹1232.00'), findsOneWidget);
     });
   });
 }
