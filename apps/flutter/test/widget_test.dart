@@ -21,7 +21,7 @@ void main() {
 
     testWidgets('labels an 8% move as caution and a 12% move as breached',
         (tester) async {
-      await tester.pumpWidget(const MaterialApp(
+      await tester.pumpWidget(MaterialApp(
         home: Scaffold(
           body: ListView(
             children: [
@@ -95,7 +95,7 @@ void main() {
       }
     });
 
-    test('rejects non-positive entry values at the dialog boundary', () async {
+    testWidgets('rejects non-positive entry values at the dialog boundary', (tester) async {
       await tester.pumpWidget(const FOPlayerApp());
       final editButton = find.widgetWithText(TextButton, 'Edit entry').first;
       await tester.ensureVisible(editButton);
