@@ -19,9 +19,7 @@ export class FirebaseAuthGuard implements CanActivate {
   constructor(private readonly firebase: FirebaseAdminService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context
-      .switchToHttp()
-      .getRequest<AuthenticatedRequest>();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const authorization = request.headers.authorization;
     if (typeof authorization !== 'string') {
       throw new UnauthorizedException('Bearer token is required');
@@ -37,7 +35,9 @@ export class FirebaseAuthGuard implements CanActivate {
     try {
       decoded = await auth.verifyIdToken(match[1]);
     } catch {
-      throw new UnauthorizedException('Firebase ID token is invalid or expired');
+      throw new UnauthorizedException(
+        'Firebase ID token is invalid or expired',
+      );
     }
 
     const allowedUids = (process.env.FIREBASE_ALLOWED_UIDS ?? '')
@@ -45,7 +45,9 @@ export class FirebaseAuthGuard implements CanActivate {
       .map((uid) => uid.trim())
       .filter(Boolean);
     if (allowedUids.length > 0 && !allowedUids.includes(decoded.uid)) {
-      throw new ForbiddenException('Firebase user is not allowlisted for FOPlayer');
+      throw new ForbiddenException(
+        'Firebase user is not allowlisted for FOPlayer',
+      );
     }
 
     request.user = {
