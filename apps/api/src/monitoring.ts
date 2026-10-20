@@ -426,7 +426,10 @@ export class PollingWorker {
         if (this.options.onError) {
           this.options.onError(error);
         } else {
-          console.error('F&O monitoring cycle failed; will retry next interval.', error);
+          console.error(
+            'F&O monitoring cycle failed; will retry next interval.',
+            error,
+          );
         }
       });
     }, intervalMs);
