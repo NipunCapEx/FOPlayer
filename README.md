@@ -17,7 +17,7 @@ Python, Redis, PostgreSQL/Prisma, and microservices are not required for the MVP
 
 ## Implementation status
 
-The merged Flutter dashboard currently displays clearly labelled demo fixtures. Monitoring and notification core logic is merged. The NestJS/Firebase runtime and owner-scoped Firestore persistence are under implementation; the Flutter client is not yet connected to the authenticated API. Do not use demo prices for trading decisions or treat this repository state as a production alerting service.
+The Flutter dashboard still displays clearly labelled demo market-price fixtures. The authenticated Flutter client now persists each user's watchlist through the NestJS API and includes an alert-history view backed by the owner-scoped alerts endpoint. The repository contains the NestJS/Firebase runtime, token verification, Firestore persistence, monitoring and notification core; deployed HTTPS/Firebase configuration, live-price UI integration, an always-on worker deployment, and real Firebase/FCM smoke tests remain to be verified. Do not use demo prices for trading decisions or treat this repository state as a production alerting service.
 
 ## Specification
 
