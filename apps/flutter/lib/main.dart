@@ -29,9 +29,9 @@ class Instrument {
 
   RiskLevel get riskLevel {
     if (isStale) return RiskLevel.normal;
-    if (spotPrice <= lowerBoundary || spotPrice >= upperBoundary) {
-      return RiskLevel.breached;
-    }
+    // Use the entry-relative percentage for threshold comparisons to avoid
+    // floating-point boundary rounding at exactly ±12%.
+    if (movementPercent.abs() >= 12) return RiskLevel.breached;
     if (movementPercent.abs() >= 10) return RiskLevel.critical;
     if (movementPercent.abs() >= 8) return RiskLevel.caution;
     return RiskLevel.normal;
