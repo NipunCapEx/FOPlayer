@@ -136,9 +136,10 @@ jobs:
         working-directory: apps/flutter
         shell: bash
         run: |
-          if [ ! -d android ]; then
-            flutter create --platforms=android --org com.nipuncapex --project-name foplayer .
+          if [ ! -f android/app/build.gradle.kts ] && [ ! -f android/app/build.gradle ]; then
+            flutter create --platforms=android --org com.nipun.finance --project-name fno .
           fi
+          sed -i 's/android:label="[^"]*"/android:label="FnO Players"/' android/app/src/main/AndroidManifest.xml
       - working-directory: apps/flutter
         if: steps.flutter.outputs.available == 'true'
         run: flutter build apk --release
