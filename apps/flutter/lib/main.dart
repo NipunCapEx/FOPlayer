@@ -329,10 +329,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'JSWSTEEL': 'JSW Steel',
     'BHARTIARTL': 'Bharti Airtel',
     'SBICARD': 'SBI Cards',
-    'TCS': 'Tata Consultancy Services',
-    'INFY': 'Infosys',
-    'HDFCBANK': 'HDFC Bank',
-    'ICICIBANK': 'ICICI Bank',
   };
 
   Future<void> _addInstrument() async {
@@ -355,7 +351,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
     if (result == null || !mounted) return;
-    setState(() => instruments = [...instruments, result]);
+    try {
+      final saved = widget.apiClient == null
+          ? null
+          : await widget.apiClient!.createStrategy(
+              symbol: result.symbol,
+              entryPrice: result.entryPrice,
+            );
+      if (!mounted) return;
+      setState(() {
+        instruments = [...instruments, result];
+        if (saved != null) _strategyIds[result.symbol] = saved.id;
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save symbol: $error')),
+        );
+      }
+    }
   }
 
   void _removeInstrument(Instrument instrument) {
