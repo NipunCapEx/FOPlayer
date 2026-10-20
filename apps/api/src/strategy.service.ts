@@ -3,10 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  SUPPORTED_SYMBOLS,
-  type SupportedSymbol,
-} from './risk-engine.js';
+import { SUPPORTED_SYMBOLS, type SupportedSymbol } from './risk-engine.js';
 import {
   FirestoreStrategyStore,
   type StrategyRecord,
@@ -45,7 +42,9 @@ export class StrategyService {
       throw new BadRequestException('symbol is not supported');
     }
     if (!isPositiveFinite(command.entryPrice)) {
-      throw new BadRequestException('entryPrice must be a positive finite number');
+      throw new BadRequestException(
+        'entryPrice must be a positive finite number',
+      );
     }
 
     return this.store.createForOwner(ownerUid, {
