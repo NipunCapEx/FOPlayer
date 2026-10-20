@@ -48,10 +48,11 @@ export class FirebaseAdminService implements OnModuleInit {
     this.credential = serviceAccountJson
       ? cert(JSON.parse(serviceAccountJson) as Record<string, unknown>)
       : applicationDefault();
+    const projectId = process.env.FIREBASE_PROJECT_ID;
     this.app = initializeApp(
       {
         credential: this.credential,
-        projectId: process.env.FIREBASE_PROJECT_ID,
+        ...(projectId ? { projectId } : {}),
       },
       APP_NAME,
     );
