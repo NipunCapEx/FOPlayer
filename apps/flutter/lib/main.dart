@@ -131,8 +131,9 @@ class AuthGate extends StatelessWidget {
               body: Center(child: CircularProgressIndicator()));
         }
         final user = snapshot.data;
-        if (user == null)
+        if (user == null) {
           return GoogleLoginScreen(onSignIn: () => _signIn(context));
+        }
         return DashboardScreen(
             onSignOut: () => FirebaseAuth.instance.signOut());
       },
