@@ -5,7 +5,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
-import { FirebaseAuthGuard, type AuthenticatedRequest } from '../src/firebase-auth.guard.js';
+import {
+  FirebaseAuthGuard,
+  type AuthenticatedRequest,
+} from '../src/firebase-auth.guard.js';
 import type { FirebaseAdminService } from '../src/firebase-admin.service.js';
 
 function contextFor(request: AuthenticatedRequest): ExecutionContext {
@@ -50,8 +53,10 @@ describe('FirebaseAuthGuard', () => {
         contextFor({ headers: { authorization: 'Basic token' } }),
       ),
     ).rejects.toBeInstanceOf(UnauthorizedException);
-    expect((firebase.auth as unknown as { verifyIdToken: ReturnType<typeof vi.fn> }).verifyIdToken)
-      .not.toHaveBeenCalled();
+    expect(
+      (firebase.auth as unknown as { verifyIdToken: ReturnType<typeof vi.fn> })
+        .verifyIdToken,
+    ).not.toHaveBeenCalled();
   });
 
   it('rejects invalid or expired Firebase tokens', async () => {
