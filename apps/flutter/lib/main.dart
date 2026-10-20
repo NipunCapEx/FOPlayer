@@ -372,12 +372,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _removeInstrument(Instrument instrument) {
+  Future<void> _removeInstrument(Instrument instrument) async {
+    try {
+      final id = _strategyIds[instrument.symbol];
+      if (widget.apiClient != null && id != null) {
+        await widget.apiClient!.updateStrategy(id, active: false);
+      }
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not remove symbol: $error')),
+      );
+      return;
+    }
+    if (!mounted) return;
     setState(() {
       instruments = instruments
           .where((item) => item.symbol != instrument.symbol)
           .toList();
     });
+    _strategyIds.remove(instrument.symbol);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${instrument.symbol} removed from this dashboard.'),
@@ -391,6 +404,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (dialogContext) => EntryPriceDialog(instrument: instrument),
     );
     if (newEntry == null || !mounted) return;
+    try {
+      final id = _strategyIds[instrument.symbol];
+      if (widget.apiClient != null && id != null) {
+        await widget.apiClient!.updateStrategy(id, entryPrice: newEntry);
+      }
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save entry price: $error')),
+      );
+      return;
+    }
+    if (!mounted) return;
     setState(() {
       instruments = [
         for (final item in instruments)
