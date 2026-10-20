@@ -20,7 +20,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(const MaterialApp(
         home: Scaffold(
-          body: Column(
+          body: ListView(
             children: [
               InstrumentCard(
                 instrument: Instrument(
@@ -64,7 +64,9 @@ void main() {
     testWidgets('entry edit recalculates boundaries for the selected ticker',
         (tester) async {
       await tester.pumpWidget(const FOPlayerApp());
-      await tester.tap(find.widgetWithText(TextButton, 'Edit entry').first);
+      final editButton = find.widgetWithText(TextButton, 'Edit entry').first;
+      await tester.ensureVisible(editButton);
+      await tester.tap(editButton);
       await tester.pumpAndSettle();
 
       final entryField = find.byKey(const Key('entry-price-input'));
