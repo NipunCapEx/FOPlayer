@@ -525,6 +525,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           if (widget.apiClient != null)
             IconButton(
+              key: const Key('refresh-dashboard-button'),
+              tooltip: 'Refresh market snapshots',
+              onPressed: _dashboardLoading ? null : _loadPersistedWatchlist,
+              icon: const Icon(Icons.refresh),
+            ),
+          if (widget.apiClient != null)
+            IconButton(
               key: const Key('open-alert-history-button'),
               tooltip: 'Alert history',
               onPressed: () {
@@ -574,24 +581,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 16),
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(14),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'DEMO DATA — prices are illustrative fixtures, not live '
-                            'market data. Alerts and trading actions are not enabled.',
+                if (widget.apiClient == null)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'DEMO DATA — prices are illustrative fixtures, not live '
+                              'market data. Alerts and trading actions are not enabled.',
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_dashboardLoading)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Loading your saved watchlist and validated market snapshots.',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_dashboardError != null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Dashboard data unavailable',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Could not refresh the authenticated dashboard: $_dashboardError',
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              key: const Key('retry-dashboard-button'),
+                              onPressed: _loadPersistedWatchlist,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.verified_outlined),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Market prices are shown only when a validated backend snapshot is available. '
+                              'Missing or older-than-10-minute snapshots are marked stale. This app does not place trades.',
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
@@ -603,7 +679,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.show_chart,
                     ),
                     _SummaryTile(
-                      label: 'Valid demo snapshots',
+                      label: widget.apiClient == null
+                          ? 'Valid demo snapshots'
+                          : 'Fresh market snapshots',
                       value: '$activeCount',
                       icon: Icons.verified_outlined,
                     ),
@@ -661,6 +739,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               instrument: instrument,
                               onEditEntry: () => _editEntry(instrument),
                               onRemove: () => _removeInstrument(instrument),
+                              isDemo: widget.apiClient == null,
                             ),
                           ),
                       ],
@@ -917,12 +996,14 @@ class InstrumentCard extends StatelessWidget {
     required this.instrument,
     required this.onEditEntry,
     this.onRemove,
+    this.isDemo = true,
     super.key,
   });
 
   final Instrument instrument;
   final VoidCallback onEditEntry;
   final VoidCallback? onRemove;
+  final bool isDemo;
 
   @override
   Widget build(BuildContext context) {
@@ -998,9 +1079,19 @@ class InstrumentCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Demo spot'),
                       Text(
-                        '₹${instrument.spotPrice.toStringAsFixed(2)}',
+                        isDemo
+                            ? 'Demo spot'
+                            : instrument.hasSpotPrice
+                                ? instrument.isStale
+                                    ? 'Last observed spot'
+                                    : 'Spot'
+                                : 'Spot price',
+                      ),
+                      Text(
+                        instrument.hasSpotPrice
+                            ? '₹${instrument.spotPrice.toStringAsFixed(2)}'
+                            : 'Unavailable',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                     ],
@@ -1030,13 +1121,19 @@ class InstrumentCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             if (instrument.isStale)
-              const Text(
-                'Snapshot is stale. No actionable risk state is shown.',
-                key: Key('stale-message'),
+              Text(
+                isDemo
+                    ? 'Snapshot is stale. No actionable risk state is shown.'
+                    : instrument.hasSpotPrice
+                        ? 'Snapshot is stale. Last observed at $snapshotTime from ${instrument.dataSource ?? 'unknown'}. No actionable risk state is shown.'
+                        : 'No validated market snapshot is available. No actionable risk state is shown.',
+                key: const Key('stale-message'),
               )
             else
               Text(
-                'Snapshot time: $snapshotTime',
+                isDemo
+                    ? 'Snapshot time: $snapshotTime'
+                    : 'Source: ${instrument.dataSource ?? 'unknown'} · Exchange time: $snapshotTime',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             Row(
