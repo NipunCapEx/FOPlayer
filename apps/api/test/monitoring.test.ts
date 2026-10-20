@@ -442,6 +442,37 @@ describe('PollingWorker', () => {
       vi.useRealTimers();
     }
   });
+
+  it('reports a scheduled failure and retries on the next interval', async () => {
+    vi.useFakeTimers();
+    try {
+      const runOnce = vi
+        .fn<() => Promise<void>>()
+        .mockRejectedValueOnce(new Error('temporary provider failure'))
+        .mockResolvedValue(undefined);
+      const onError = vi.fn();
+      const worker = new PollingWorker({ runOnce } as unknown as RiskMonitor, {
+        intervalMs: 1000,
+        now: () => now,
+        isMonitoringWindow: () => true,
+        onError,
+      });
+
+      worker.start();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(runOnce).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'temporary provider failure' }),
+      );
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(runOnce).toHaveBeenCalledTimes(2);
+      expect(onError).toHaveBeenCalledOnce();
+      worker.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('PollingWorker default clock', () => {
