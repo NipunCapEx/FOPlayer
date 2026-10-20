@@ -11,6 +11,7 @@ export interface Strategy {
   symbol: SupportedSymbol;
   entryPrice: number;
   active: boolean;
+  ownerUid?: string;
 }
 
 export type AlertKind =
@@ -22,6 +23,7 @@ export type AlertKind =
 
 export interface RiskAlert {
   idempotencyKey: string;
+  ownerUid?: string;
   strategyId: string;
   symbol: SupportedSymbol;
   kind: AlertKind;

@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // The NestJS API uses Firebase Admin and enforces Firebase ID-token
+    // authentication plus ownerUid scoping. Clients must not bypass that API.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

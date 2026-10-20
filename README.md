@@ -17,7 +17,7 @@ Python, Redis, PostgreSQL/Prisma, and microservices are not required for the MVP
 
 ## Implementation status
 
-The merged Flutter dashboard currently displays clearly labelled demo fixtures. Monitoring and notification core logic is being added with deterministic tests; Firebase/Firestore persistence, authenticated API wiring and deployment are not yet complete. Do not use demo prices for trading decisions or treat this repository state as a production alerting service.
+The merged Flutter dashboard currently displays clearly labelled demo fixtures. Monitoring and notification core logic is merged. The NestJS/Firebase runtime and owner-scoped Firestore persistence are under implementation; the Flutter client is not yet connected to the authenticated API. Do not use demo prices for trading decisions or treat this repository state as a production alerting service.
 
 ## Specification
 

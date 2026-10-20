@@ -63,7 +63,7 @@ jobs:
           fi
           echo "Prettier's suggested patch follows. This diagnostic does not make the check pass."
           npx prettier --write "src/**/*.ts" "test/**/*.ts" "vitest.config.ts" "tsconfig.json" "package.json"
-          git --no-pager diff -- src test
+          git --no-pager diff -- src test tsconfig.json
           exit 1
       - name: Typecheck and build
         run: npm run build
@@ -131,9 +131,25 @@ jobs:
       - working-directory: apps/flutter
         if: steps.flutter.outputs.available == 'true'
         run: flutter pub get
+      - name: Generate Android platform scaffolding when absent
+        if: steps.flutter.outputs.available == 'true'
+        working-directory: apps/flutter
+        shell: bash
+        run: |
+          if [ ! -d android ]; then
+            flutter create --platforms=android --org com.nipuncapex --project-name foplayer .
+          fi
       - working-directory: apps/flutter
         if: steps.flutter.outputs.available == 'true'
         run: flutter build apk --release
+      - name: Upload installable Android APK
+        if: steps.flutter.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: foplayer-android-release
+          path: apps/flutter/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
 
   status:
     name: Required CI summary

@@ -1,6 +1,6 @@
 # F&O Hedging Decision Dashboard — Implementation Plan
 
-**Status:** Implementation in progress — Milestones 1–2 merged; monitoring core under review  
+**Status:** Implementation in progress — Milestones 1–3 merged; authenticated runtime under review  
 **Repository:** `NipunCapEx/FOPlayer`  
 **Planning date:** 2026-10-20
 
@@ -12,8 +12,9 @@ Build a decision-support dashboard for a monthly F&O short-strangle hedging stra
 ## 1A. Implementation status (2026-10-20)
 
 - **Merged:** TypeScript risk calculations and the Flutter dashboard shell for four symbols. The dashboard is explicitly demo-only until the live API is connected.
-- **Under implementation:** validated Yahoo Finance prototype adapter, freshness checks, monitoring orchestration, market-hours polling, threshold escalation, daily-move and historical-volatility signals, Telegram/FCM transport contracts, and retryable alert outbox interfaces.
-- **Not yet production-wired:** NestJS HTTP/runtime modules, Firebase Authentication, Firestore repository implementation, persisted device-token registration, server credential/token provisioning, deployment and end-to-end smoke tests. Do not represent the dashboard as live monitoring until these are complete and verified.
+- **Merged:** validated Yahoo Finance prototype adapter, freshness checks, monitoring orchestration, market-hours polling, threshold escalation, daily-move and historical-volatility signals, Telegram/FCM transport contracts, and retryable alert outbox interfaces.
+- **Under implementation:** NestJS HTTP/runtime, Firebase ID-token verification, owner-scoped Firestore repositories, strategy/alert/device-token endpoints, and server-side runtime configuration.
+- **Still pending after this milestone:** connect the Flutter dashboard to the authenticated API, implement live loading/error states and alert history, deploy an always-on worker, and complete real Firebase/FCM smoke tests. Do not represent the dashboard as live until these are complete and verified.
 - **Market-hours gate:** weekdays 09:15–15:30 Asia/Kolkata; this does not account for exchange holidays or special sessions and must be made configurable before production.
 - **Notification retry scope:** successful channels/devices are not resent on retries within the same worker process. The persistent repository must store delivery state and risk-episode state so this guarantee survives restarts.
 

@@ -11,8 +11,8 @@ Status labels: **Implemented & verified**, **Implemented, verification pending**
 | Invalid/missing prices and entries | Unit tests reject non-positive/non-finite values | Implemented & verified | PR 1 CI passed on `e8eb806093ec1c7757c8e1c5dc805e2616962d09` |
 | Stale/out-of-order snapshots | Reject stale fetch and exchange timestamps, future timestamps, invalid prices; no fresh assessment/alert | Implemented, verification pending | `market-data.test.ts`, `monitoring.test.ts` |
 | Four supported symbols | Domain validation tests | Planned | Add strategy model and API |
-| Authentication and server-side authorization | API integration tests for unauthenticated/unauthorized requests | Planned | Firebase Auth integration |
-| Firestore rules and persistence | Emulator tests; cross-user access denied | Planned | Dedicated Firebase project/config |
+| Firebase ID-token authentication and optional UID allowlist | Guard tests for missing, malformed, expired and disallowed tokens | Implemented, verification pending | `firebase-auth.guard.test.ts` |
+| Owner-scoped Firestore strategy, snapshot, risk-state and outbox persistence | Fake-store contract tests for ownership, dedupe, retry state and device tokens; direct client access denied by rules | Implemented, verification pending | `firestore-store.test.ts`, `firestore.rules`; Firebase emulator smoke still required |
 | Free provider adapter reliability | Yahoo chart adapter contract, ticker mapping, daily-history cache and HTTP error handling | Implemented, verification pending | `market-data.test.ts`; unofficial provider caveats documented |
 | Five-minute market-hours polling | Configurable 5-minute worker, overlap guard, weekday 09:15–15:30 IST gate | Implemented, verification pending | `isIndianEquityMarketOpen` tests; holiday calendar not included |
 | Alert deduplication/re-arm | Stable idempotency keys, severity escalation, recovery episodes persisted via repository contract, retry pending outbox | Implemented, verification pending | `monitoring.test.ts`; production repository adapter still required |

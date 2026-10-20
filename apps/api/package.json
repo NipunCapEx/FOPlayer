@@ -2,17 +2,28 @@
   "name": "foplayer-api",
   "version": "0.1.0",
   "private": true,
-  "description": "FOPlayer domain foundation and deterministic risk engine",
+  "description": "NestJS runtime, Firebase-backed strategy store, and deterministic monitoring engine",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"vitest.config.ts\" \"tsconfig.json\" \"package.json\""
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"vitest.config.ts\" \"tsconfig.json\" \"package.json\"",
+    "start": "node dist/src/main.js",
+    "start:prod": "node dist/src/main.js"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "3.2.4",
     "prettier": "3.6.2",
     "typescript": "5.8.3",
-    "vitest": "3.2.4"
+    "vitest": "3.2.4",
+    "@types/node": "^22.15.30"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.8",
+    "@nestjs/core": "^11.1.8",
+    "@nestjs/platform-express": "^11.1.8",
+    "firebase-admin": "^13.5.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   }
 }
