@@ -423,7 +423,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final fresh = snapshot?.isFreshAt(now) ?? false;
           return Instrument(
             symbol: item.symbol,
-            name: fixture?.name ?? _supportedSymbols[item.symbol] ?? item.symbol,
+            name:
+                fixture?.name ?? _supportedSymbols[item.symbol] ?? item.symbol,
             entryPrice: item.entryPrice,
             spotPrice: snapshot?.spotPrice ?? item.entryPrice,
             lastUpdated: snapshot?.exchangeTimestamp ??
@@ -441,9 +442,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _dashboardLoading = false;
         _dashboardError = error.toString();
-        instruments = instruments
-            .map((item) => item.copyWith(isStale: true))
-            .toList();
+        instruments =
+            instruments.map((item) => item.copyWith(isStale: true)).toList();
       });
     }
   }
@@ -559,8 +559,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeCount =
-        instruments.where((i) => !i.isCurrentlyStale).length;
+    final activeCount = instruments.where((i) => !i.isCurrentlyStale).length;
     final breachedCount = instruments
         .where((i) => !i.isCurrentlyStale && i.riskLevel == RiskLevel.breached)
         .length;
@@ -1149,7 +1148,8 @@ class InstrumentCard extends StatelessWidget {
                       : '${instrument.movementPercent >= 0 ? '+' : ''}'
                           '${instrument.movementPercent.toStringAsFixed(2)}%',
                   style: TextStyle(
-                    color: instrument.isCurrentlyStale ? Colors.blueGrey : color,
+                    color:
+                        instrument.isCurrentlyStale ? Colors.blueGrey : color,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
