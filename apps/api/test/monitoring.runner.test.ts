@@ -15,7 +15,7 @@ describe('MonitoringRunner', () => {
     runner.onModuleInit();
     expect(worker.start).not.toHaveBeenCalled();
     runner.onModuleDestroy();
-    expect(worker.stop).toHaveBeenCalledOnce();
+    expect(worker.stop).not.toHaveBeenCalled();
   });
 
   it('starts the worker when Firebase is configured', () => {
@@ -28,5 +28,7 @@ describe('MonitoringRunner', () => {
 
     runner.onModuleInit();
     expect(worker.start).toHaveBeenCalledOnce();
+    runner.onModuleDestroy();
+    expect(worker.stop).toHaveBeenCalledOnce();
   });
 });
