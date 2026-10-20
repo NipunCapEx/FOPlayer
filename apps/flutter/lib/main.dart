@@ -29,6 +29,8 @@ class Instrument {
     required this.spotPrice,
     required this.lastUpdated,
     this.isStale = false,
+    this.hasSpotPrice = true,
+    this.dataSource,
   });
 
   final String symbol;
@@ -37,6 +39,8 @@ class Instrument {
   final double spotPrice;
   final DateTime lastUpdated;
   final bool isStale;
+  final bool hasSpotPrice;
+  final String? dataSource;
 
   double get lowerBoundary => entryPrice * 0.88;
   double get upperBoundary => entryPrice * 1.12;
@@ -52,13 +56,23 @@ class Instrument {
     return RiskLevel.normal;
   }
 
-  Instrument copyWith({double? entryPrice}) => Instrument(
+  Instrument copyWith({
+    double? entryPrice,
+    double? spotPrice,
+    DateTime? lastUpdated,
+    bool? isStale,
+    bool? hasSpotPrice,
+    String? dataSource,
+  }) =>
+      Instrument(
         symbol: symbol,
         name: name,
         entryPrice: entryPrice ?? this.entryPrice,
-        spotPrice: spotPrice,
-        lastUpdated: lastUpdated,
-        isStale: isStale,
+        spotPrice: spotPrice ?? this.spotPrice,
+        lastUpdated: lastUpdated ?? this.lastUpdated,
+        isStale: isStale ?? this.isStale,
+        hasSpotPrice: hasSpotPrice ?? this.hasSpotPrice,
+        dataSource: dataSource ?? this.dataSource,
       );
 }
 
@@ -284,11 +298,13 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late List<Instrument> instruments;
+  bool _dashboardLoading = false;
+  String? _dashboardError;
 
   @override
   void initState() {
     super.initState();
-    // Explicitly labelled fixtures: the live provider/API is part of milestone 3.
+    // Explicitly labelled fixtures are used only in prototype mode.
     final now = DateTime(2026, 10, 20, 11, 0);
     instruments = [
       Instrument(
@@ -321,50 +337,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
         isStale: true,
       ),
     ];
-    if (widget.apiClient != null) _loadPersistedWatchlist();
+    if (widget.apiClient != null) {
+      instruments = instruments
+          .map((item) => item.copyWith(isStale: true, hasSpotPrice: false))
+          .toList();
+      _loadPersistedWatchlist();
+    }
   }
 
   Future<void> _loadPersistedWatchlist() async {
+    final apiClient = widget.apiClient;
+    if (apiClient == null) return;
+    setState(() {
+      _dashboardLoading = true;
+      _dashboardError = null;
+    });
     try {
-      var saved = await widget.apiClient!.listStrategies();
-      if (saved.isEmpty) {
+      var dashboard = await apiClient.getDashboard();
+      if (!dashboard.hasAnyStrategies) {
         for (final item in List<Instrument>.of(instruments)) {
-          saved = [
-            ...saved,
-            await widget.apiClient!.createStrategy(
-              symbol: item.symbol,
-              entryPrice: item.entryPrice,
-            )
-          ];
+          await apiClient.createStrategy(
+            symbol: item.symbol,
+            entryPrice: item.entryPrice,
+          );
         }
+        dashboard = await apiClient.getDashboard();
       }
       if (!mounted) return;
       final fixtures = {for (final item in instruments) item.symbol: item};
+      final now = DateTime.now();
       setState(() {
         _strategyIds
           ..clear()
-          ..addEntries(saved.map((item) => MapEntry(item.symbol, item.id)));
-        instruments = saved.map((item) {
+          ..addEntries(dashboard.strategies.map(
+            (item) => MapEntry(item.symbol, item.id),
+          ));
+        instruments = dashboard.strategies.map((item) {
           final fixture = fixtures[item.symbol];
-          if (fixture == null) {
-            return Instrument(
-              symbol: item.symbol,
-              name: _supportedSymbols[item.symbol] ?? item.symbol,
-              entryPrice: item.entryPrice,
-              spotPrice: item.entryPrice,
-              lastUpdated: DateTime.fromMillisecondsSinceEpoch(0),
-              isStale: true,
-            );
-          }
-          return fixture.copyWith(entryPrice: item.entryPrice);
+          final snapshot = dashboard.snapshots[item.id];
+          final hasSnapshot = snapshot != null;
+          final fresh = snapshot?.isFreshAt(now) ?? false;
+          return Instrument(
+            symbol: item.symbol,
+            name: fixture?.name ?? _supportedSymbols[item.symbol] ?? item.symbol,
+            entryPrice: item.entryPrice,
+            spotPrice: snapshot?.spotPrice ?? item.entryPrice,
+            lastUpdated: snapshot?.exchangeTimestamp ??
+                DateTime.fromMillisecondsSinceEpoch(0),
+            isStale: !fresh,
+            hasSpotPrice: hasSnapshot,
+            dataSource: snapshot?.source,
+          );
         }).toList();
+        _dashboardLoading = false;
       });
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not load saved watchlist: $error')),
-        );
-      }
+      if (!mounted) return;
+      setState(() {
+        _dashboardLoading = false;
+        _dashboardError = error.toString();
+        instruments = instruments
+            .map((item) => item.copyWith(isStale: true))
+            .toList();
+      });
     }
   }
 
