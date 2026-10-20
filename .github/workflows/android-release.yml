@@ -103,6 +103,18 @@ jobs:
           print("Firebase Android package and web OAuth client validated.")
           PY
 
+      - name: Apply Google Services Gradle plugin
+        run: |
+          set -euo pipefail
+          if [ -f android/app/build.gradle.kts ]; then
+            grep -q 'com.google.gms.google-services' android/app/build.gradle.kts || sed -i '/plugins {/a\\    id("com.google.gms.google-services") version "4.4.2"' android/app/build.gradle.kts
+          elif [ -f android/app/build.gradle ]; then
+            grep -q 'com.google.gms.google-services' android/app/build.gradle || sed -i "/plugins {/a\\    id 'com.google.gms.google-services' version '4.4.2'" android/app/build.gradle
+          else
+            echo "::error::No Android Gradle app build file found."
+            exit 1
+          fi
+
       - name: Configure release signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
