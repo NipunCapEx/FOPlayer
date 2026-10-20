@@ -114,8 +114,8 @@ class AuthGate extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-                'Unable to sign in with Google. Check Firebase OAuth setup.')),
+              content: Text(
+                  'Unable to sign in with Google. Check Firebase OAuth setup.')),
         );
       }
     }
@@ -168,8 +168,8 @@ class GoogleLoginScreen extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   const Text(
-                    'Sign in to access your personal hedging dashboard.',
-                    textAlign: TextAlign.center),
+                      'Sign in to access your personal hedging dashboard.',
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 24),
                   FilledButton.icon(
                     key: const Key('google-sign-in-button'),
@@ -179,9 +179,9 @@ class GoogleLoginScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Demo market values are illustrative and are not trading advice.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12)),
+                      'Demo market values are illustrative and are not trading advice.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12)),
                 ],
               ),
             ),
@@ -215,12 +215,12 @@ class FirebaseSetupScreen extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 8),
                   const Text(
-                    'FnO Players needs its own Firebase Android app and Google sign-in configuration before you can sign in. Configure google-services.json and enable Google in Firebase Authentication.'),
+                      'FnO Players needs its own Firebase Android app and Google sign-in configuration before you can sign in. Configure google-services.json and enable Google in Firebase Authentication.'),
                   if (error != null) ...[
                     const SizedBox(height: 12),
                     const Text(
-                      'Initialization details are available in the app logs.',
-                      style: TextStyle(fontSize: 12)),
+                        'Initialization details are available in the app logs.',
+                        style: TextStyle(fontSize: 12)),
                   ],
                 ],
               ),
