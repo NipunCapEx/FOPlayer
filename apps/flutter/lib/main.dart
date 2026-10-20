@@ -135,8 +135,14 @@ class AuthGate extends StatelessWidget {
         if (user == null) {
           return GoogleLoginScreen(onSignIn: () => _signIn(context));
         }
+        final apiClient = StrategyApiClient();
+        if (!apiClient.isConfigured) {
+          return const ApiSetupScreen();
+        }
         return DashboardScreen(
-            onSignOut: () => FirebaseAuth.instance.signOut());
+          apiClient: apiClient,
+          onSignOut: () => FirebaseAuth.instance.signOut(),
+        );
       },
     );
   }
@@ -234,6 +240,36 @@ class FirebaseSetupScreen extends StatelessWidget {
   }
 }
 
+class ApiSetupScreen extends StatelessWidget {
+  const ApiSetupScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.settings_ethernet, size: 56),
+                const SizedBox(height: 16),
+                Text('Backend setup required',
+                    style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                const Text(
+                  'Set FOPLAYER_API_BASE_URL to the deployed HTTPS backend URL when building the app. The authenticated watchlist is not stored locally as a fallback.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, this.onSignOut, this.apiClient});
 
