@@ -205,12 +205,15 @@ class UserDashboard {
       throw const FormatException('Invalid dashboard response.');
     }
     final hasAnyStrategies = rawStrategies.isNotEmpty;
-    final strategies = rawStrategies.map((value) {
-      if (value is! Map<String, dynamic>) {
-        throw const FormatException('Invalid dashboard strategy.');
-      }
-      return UserStrategy.fromJson(value);
-    }).where((strategy) => strategy.active).toList();
+    final strategies = rawStrategies
+        .map((value) {
+          if (value is! Map<String, dynamic>) {
+            throw const FormatException('Invalid dashboard strategy.');
+          }
+          return UserStrategy.fromJson(value);
+        })
+        .where((strategy) => strategy.active)
+        .toList();
     final snapshots = <String, DashboardSnapshot>{};
     for (final value in rawSnapshots) {
       if (value is! Map<String, dynamic>) {
