@@ -281,37 +281,37 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       .collection('strategySnapshots')
       .doc(own.id)
       .set({
-      assessment,
-      source: 'fixture',
-      exchangeTimestamp: new Date('2026-10-20T10:00:00Z'),
-      fetchedAt: new Date('2026-10-20T10:00:01Z'),
-      recordedAt: new Date('2026-10-20T10:00:02Z'),
+        assessment,
+        source: 'fixture',
+        exchangeTimestamp: new Date('2026-10-20T10:00:00Z'),
+        fetchedAt: new Date('2026-10-20T10:00:01Z'),
+        recordedAt: new Date('2026-10-20T10:00:02Z'),
     });
     await db
       .collection('strategySnapshots')
       .doc(secondOwn.id)
       .set({
-      assessment,
-      source: 'fixture-2',
-      exchangeTimestamp: '2026-10-20T10:00:00Z',
-      fetchedAt: { toDate: () => new Date('2026-10-20T10:00:01Z') },
-      recordedAt: 'not-a-date',
+        assessment,
+        source: 'fixture-2',
+        exchangeTimestamp: '2026-10-20T10:00:00Z',
+        fetchedAt: { toDate: () => new Date('2026-10-20T10:00:01Z') },
+        recordedAt: 'not-a-date',
     });
     await db
       .collection('alerts')
       .doc('own-alert')
       .set({
-      ownerUid: 'owner-a',
-      createdAt: new Date('2026-10-20T10:00:00Z'),
-      kind: 'caution',
+        ownerUid: 'owner-a',
+        createdAt: new Date('2026-10-20T10:00:00Z'),
+        kind: 'caution',
     });
     await db
       .collection('alerts')
       .doc('foreign-alert')
       .set({
-      ownerUid: 'owner-b',
-      createdAt: new Date('2026-10-20T10:01:00Z'),
-      kind: 'critical',
+        ownerUid: 'owner-b',
+        createdAt: new Date('2026-10-20T10:01:00Z'),
+        kind: 'critical',
     });
 
     const dashboard = await strategies.getDashboard('owner-a');
