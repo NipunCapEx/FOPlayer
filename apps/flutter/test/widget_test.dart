@@ -148,8 +148,14 @@ void main() {
     testWidgets('adds a supported symbol with a positive entry price',
         (tester) async {
       await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
+      final removeButton = find.byKey(const Key('remove-RELIANCE'));
+      await tester.ensureVisible(removeButton);
+      await tester.tap(removeButton);
+      await tester.pumpAndSettle();
+
       await tester.tap(find.byKey(const Key('add-instrument-button')));
       await tester.pumpAndSettle();
+      expect(find.text('RELIANCE'), findsWidgets);
 
       await tester.enterText(
         find.byKey(const Key('new-entry-price-input')),
@@ -158,12 +164,17 @@ void main() {
       await tester.tap(find.byKey(const Key('save-new-symbol-button')));
       await tester.pumpAndSettle();
 
-      expect(find.text('TCS'), findsOneWidget);
+      expect(find.text('RELIANCE'), findsWidgets);
       expect(find.textContaining('DEMO DATA'), findsOneWidget);
     });
 
     testWidgets('rejects invalid entry when adding a symbol', (tester) async {
       await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
+      final removeButton = find.byKey(const Key('remove-RELIANCE'));
+      await tester.ensureVisible(removeButton);
+      await tester.tap(removeButton);
+      await tester.pumpAndSettle();
+
       await tester.tap(find.byKey(const Key('add-instrument-button')));
       await tester.pumpAndSettle();
 
