@@ -59,6 +59,8 @@ describe('assessRisk — business outcomes', () => {
     Number.NaN,
     Number.POSITIVE_INFINITY,
     Number.NEGATIVE_INFINITY,
+    undefined as unknown as number,
+    null as unknown as number,
   ])(
     'rejects invalid spot price %s instead of showing normal risk',
     (spotPrice) => {
@@ -66,7 +68,14 @@ describe('assessRisk — business outcomes', () => {
     },
   );
 
-  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+  it.each([
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    undefined as unknown as number,
+    null as unknown as number,
+  ])(
     'rejects invalid entry price %s',
     (entryPrice) => {
       expect(() =>
