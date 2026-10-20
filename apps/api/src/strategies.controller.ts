@@ -32,10 +32,7 @@ export class StrategiesController {
   }
 
   @Post('strategies')
-  createStrategy(
-    @Req() request: AuthenticatedRequest,
-    @Body() body: unknown,
-  ) {
+  createStrategy(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     if (!isRecord(body)) {
       throw new BadRequestException('request body must be an object');
     }
@@ -68,10 +65,7 @@ export class StrategiesController {
   }
 
   @Post('device-tokens')
-  registerDevice(
-    @Req() request: AuthenticatedRequest,
-    @Body() body: unknown,
-  ) {
+  registerDevice(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     if (!isRecord(body)) {
       throw new BadRequestException('request body must be an object');
     }
