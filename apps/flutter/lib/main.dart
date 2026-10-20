@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +33,7 @@ class Instrument {
     this.isStale = false,
     this.hasSpotPrice = true,
     this.dataSource,
+    this.fetchedAt,
   });
 
   final String symbol;
@@ -41,6 +44,22 @@ class Instrument {
   final bool isStale;
   final bool hasSpotPrice;
   final String? dataSource;
+  final DateTime? fetchedAt;
+
+  bool get isCurrentlyStale {
+    if (isStale) return true;
+    final fetched = fetchedAt;
+    if (fetched == null) return false;
+    const maxAge = Duration(minutes: 10);
+    const maxFutureSkew = Duration(minutes: 1);
+    final now = DateTime.now();
+    final fetchAge = now.difference(fetched);
+    final exchangeAge = now.difference(lastUpdated);
+    return fetchAge > maxAge ||
+        fetchAge < -maxFutureSkew ||
+        exchangeAge > maxAge ||
+        exchangeAge < -maxFutureSkew;
+  }
 
   double get lowerBoundary => entryPrice * 0.88;
   double get upperBoundary => entryPrice * 1.12;
@@ -63,6 +82,7 @@ class Instrument {
     bool? isStale,
     bool? hasSpotPrice,
     String? dataSource,
+    DateTime? fetchedAt,
   }) =>
       Instrument(
         symbol: symbol,
@@ -73,6 +93,7 @@ class Instrument {
         isStale: isStale ?? this.isStale,
         hasSpotPrice: hasSpotPrice ?? this.hasSpotPrice,
         dataSource: dataSource ?? this.dataSource,
+        fetchedAt: fetchedAt ?? this.fetchedAt,
       );
 }
 
@@ -300,6 +321,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late List<Instrument> instruments;
   bool _dashboardLoading = false;
   String? _dashboardError;
+  Timer? _freshnessTimer;
 
   @override
   void initState() {
@@ -341,7 +363,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       instruments = instruments
           .map((item) => item.copyWith(isStale: true, hasSpotPrice: false))
           .toList();
+      _freshnessTimer = Timer.periodic(
+        const Duration(minutes: 1),
+        (_) => _refreshSnapshotFreshness(),
+      );
       _loadPersistedWatchlist();
+    }
+  }
+
+  @override
+  void dispose() {
+    _freshnessTimer?.cancel();
+    super.dispose();
+  }
+
+  void _refreshSnapshotFreshness() {
+    if (!mounted || widget.apiClient == null) return;
+    final refreshed = instruments
+        .map((item) => item.copyWith(isStale: item.isCurrentlyStale))
+        .toList();
+    if (refreshed.asMap().entries.any(
+          (entry) => entry.value.isStale != instruments[entry.key].isStale,
+        )) {
+      setState(() => instruments = refreshed);
     }
   }
 
@@ -387,6 +431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isStale: !fresh,
             hasSpotPrice: hasSnapshot,
             dataSource: snapshot?.source,
+            fetchedAt: snapshot?.fetchedAt,
           );
         }).toList();
         _dashboardLoading = false;
@@ -514,9 +559,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeCount = instruments.where((i) => !i.isStale).length;
+    final activeCount =
+        instruments.where((i) => !i.isCurrentlyStale).length;
     final breachedCount = instruments
-        .where((i) => !i.isStale && i.riskLevel == RiskLevel.breached)
+        .where((i) => !i.isCurrentlyStale && i.riskLevel == RiskLevel.breached)
         .length;
 
     return Scaffold(
