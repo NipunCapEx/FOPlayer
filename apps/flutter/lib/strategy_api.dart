@@ -172,7 +172,9 @@ class StrategyApiClient {
         'Watchlist request failed (${response.statusCode}): $message',
       );
     }
-    if (response.body.isEmpty) return null;
+    if (response.body.isEmpty) {
+      return null;
+    }
     return jsonDecode(response.body);
   }
 }
