@@ -344,6 +344,7 @@ export class RiskMonitor {
       price: snapshot.price,
       movementPercent: movement,
       createdAt: now,
+      notificationsEnabled: strategy.notificationsEnabled !== false,
     });
     this.emittedNonRiskSignals.add(signalKey);
   }
