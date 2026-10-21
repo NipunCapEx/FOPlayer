@@ -295,15 +295,18 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       strategies.updateForOwner('owner-a', stable.id, { active: true }),
     ).resolves.toMatchObject({ id: stable.id, active: true });
 
-    await db.collection('strategies').doc('legacy-strategy').set({
+    await db
+      .collection('strategies')
+      .doc('legacy-strategy')
+      .set({
       id: 'legacy-strategy',
       ownerUid: 'owner-a',
       symbol: 'JSWSTEEL',
       entryPrice: 900,
       active: false,
       createdAt: new Date('2026-10-01T00:00:00Z'),
-      updatedAt: new Date('2026-10-01T00:00:00Z'),
-    });
+        updatedAt: new Date('2026-10-01T00:00:00Z'),
+      });
     await expect(
       strategies.updateForOwner('owner-a', 'legacy-strategy', {
         active: true,
