@@ -146,15 +146,17 @@ describe('Snapshot validation rejects stale and invalid market data', () => {
   });
 
   it('fails closed for malformed configured expiry dates', async () => {
-    const harness = createHarness();
-    vi.mocked(harness.repository.listActiveStrategies).mockResolvedValueOnce([
-      { ...strategy, expiryDate: 'not-a-date' },
-    ]);
+    for (const expiryDate of ['not-a-date', '2026-02-30']) {
+      const harness = createHarness();
+      vi.mocked(harness.repository.listActiveStrategies).mockResolvedValueOnce([
+        { ...strategy, expiryDate },
+      ]);
 
-    await harness.monitor.runOnce();
+      await harness.monitor.runOnce();
 
-    expect(harness.provider.getSnapshot).not.toHaveBeenCalled();
-    expect(harness.repository.recordAssessment).not.toHaveBeenCalled();
+      expect(harness.provider.getSnapshot).not.toHaveBeenCalled();
+      expect(harness.repository.recordAssessment).not.toHaveBeenCalled();
+    }
   });
 
   it('rejects stale exchange data even when it was just fetched', () => {
