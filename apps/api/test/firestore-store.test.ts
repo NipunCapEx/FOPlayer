@@ -209,6 +209,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       symbol: 'RELIANCE',
       entryPrice: 1000,
       active: true,
+      entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
     });
     await strategies.createForOwner('owner-b', {
@@ -266,6 +267,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       symbol: 'RELIANCE',
       entryPrice: 1000,
       active: true,
+      entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
     });
     await strategies.updateForOwner('owner-a', original.id, { active: false });
@@ -281,6 +283,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     expect(reactivated).toMatchObject({
       entryPrice: 1200,
       active: true,
+      entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
       ownerUid: 'owner-a',
     });
