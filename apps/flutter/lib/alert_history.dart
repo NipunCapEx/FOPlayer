@@ -14,6 +14,29 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
   List<UserAlert> _alerts = const [];
   Object? _error;
   bool _loading = true;
+  String _symbolFilter = 'All';
+  String _kindFilter = 'All';
+  String _statusFilter = 'All';
+
+  List<String> _filterOptions(String Function(UserAlert) select) {
+    final values = _alerts.map(select).toSet().toList()..sort();
+    return ['All', ...values];
+  }
+
+  List<UserAlert> get _visibleAlerts => _alerts.where((alert) {
+        return (_symbolFilter == 'All' || alert.symbol == _symbolFilter) &&
+            (_kindFilter == 'All' || alert.kind == _kindFilter) &&
+            (_statusFilter == 'All' ||
+                alert.status.toLowerCase() == _statusFilter);
+      }).toList();
+
+  void _clearFilters() {
+    setState(() {
+      _symbolFilter = 'All';
+      _kindFilter = 'All';
+      _statusFilter = 'All';
+    });
+  }
 
   @override
   void initState() {
@@ -85,15 +108,108 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
-                      child: ListView.separated(
+                      child: ListView(
                         key: const Key('alert-history-list'),
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(16),
-                        itemCount: _alerts.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) =>
-                            _AlertHistoryCard(alert: _alerts[index]),
+                        children: [
+                          _buildFilters(),
+                          const SizedBox(height: 12),
+                          if (_visibleAlerts.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text(
+                                'No alerts match these filters.',
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          else
+                            for (final alert in _visibleAlerts) ...[
+                              _AlertHistoryCard(alert: alert),
+                              const SizedBox(height: 10),
+                            ],
+                        ],
                       ),
                     ),
+    );
+  }
+
+  Widget _buildFilters() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Filter alerts',
+                style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              key: const Key('alert-symbol-filter'),
+              initialValue: _symbolFilter,
+              decoration: const InputDecoration(labelText: 'Symbol'),
+              items: [
+                for (final option in _filterOptions((alert) => alert.symbol))
+                  DropdownMenuItem(
+                    value: option,
+                    child: Text(option == 'All' ? 'All symbols' : option),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _symbolFilter = value);
+              },
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              key: const Key('alert-kind-filter'),
+              initialValue: _kindFilter,
+              decoration: const InputDecoration(labelText: 'Alert type'),
+              items: [
+                for (final option in _filterOptions((alert) => alert.kind))
+                  DropdownMenuItem(
+                    value: option,
+                    child: Text(
+                      option == 'All'
+                          ? 'All types'
+                          : option.replaceAll('-', ' ').toUpperCase(),
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _kindFilter = value);
+              },
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              key: const Key('alert-status-filter'),
+              initialValue: _statusFilter,
+              decoration: const InputDecoration(labelText: 'Delivery status'),
+              items: [
+                for (final option in _filterOptions(
+                  (alert) => alert.status.toLowerCase(),
+                ))
+                  DropdownMenuItem(
+                    value: option,
+                    child: Text(
+                      option == 'All' ? 'All statuses' : option.toUpperCase(),
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _statusFilter = value);
+              },
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                key: const Key('clear-alert-filters-button'),
+                onPressed: _clearFilters,
+                child: const Text('Clear filters'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -143,6 +259,8 @@ class _AlertHistoryCard extends StatelessWidget {
     final icon = switch (status) {
       'delivered' => Icons.check_circle_outline,
       'pending' => Icons.schedule,
+      'suppressed' => Icons.notifications_off_outlined,
+      'failed' => Icons.error_outline,
       _ => Icons.info_outline,
     };
 
