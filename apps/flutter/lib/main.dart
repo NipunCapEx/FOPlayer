@@ -480,7 +480,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 settings.authorizationStatus == AuthorizationStatus.provisional;
           },
           getToken: messaging.getToken,
-          tokenRefresh: FirebaseMessaging.onTokenRefresh,
+          tokenRefresh: messaging.onTokenRefresh,
           registerDeviceToken: widget.apiClient!.registerDeviceToken,
           onError: (error) =>
               debugPrint('FCM device registration failed: $error'),
