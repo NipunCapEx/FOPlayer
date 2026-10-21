@@ -1340,6 +1340,19 @@ class InstrumentCard extends StatelessWidget {
                     onPressed: onRemove,
                     icon: const Icon(Icons.remove_circle_outline),
                   ),
+                if (onEditExpiry != null)
+                  TextButton.icon(
+                    onPressed: onEditExpiry,
+                    icon: const Icon(Icons.event_outlined, size: 18),
+                    label: const Text('Edit expiry'),
+                  ),
+                TextButton.icon(
+                  onPressed: onEditEntry,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit entry'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
