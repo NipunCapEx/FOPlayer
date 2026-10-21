@@ -705,6 +705,48 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
     ).rejects.toThrow('has no valid owner');
   });
 
+  it('records muted alerts as suppressed without dispatching them', async () => {
+    const { strategies, monitoring, db } = createStores();
+    const strategy = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    await monitoring.listActiveStrategies();
+    const alert = {
+      idempotencyKey: 'risk:strategy-1:episode-1:muted',
+      strategyId: strategy.id,
+      symbol: 'RELIANCE' as const,
+      kind: 'critical' as const,
+      message: 'RELIANCE critical',
+      price: 1100,
+      movementPercent: 10,
+      createdAt: new Date('2026-10-20T10:00:00Z'),
+      notificationsEnabled: false,
+    };
+
+    await monitoring.enqueueAlert(alert);
+    await expect(monitoring.listPendingAlerts()).resolves.toMatchObject([
+      expect.objectContaining({ notificationsEnabled: false }),
+    ]);
+    await monitoring.markAlertSuppressed(
+      alert.idempotencyKey,
+      new Date('2026-10-20T10:01:00Z'),
+    );
+
+    await expect(monitoring.listPendingAlerts()).resolves.toHaveLength(0);
+    const alertId = createHash('sha256')
+      .update(alert.idempotencyKey)
+      .digest('hex');
+    await expect(db.collection('alerts').doc(alertId).get()).resolves.toMatchObject({
+      exists: true,
+      data: expect.objectContaining({
+        status: 'suppressed',
+        suppressionReason: 'strategy_notifications_disabled',
+      }),
+    });
+  });
+
   it('deduplicates alerts and retries pending outbox entries until delivered', async () => {
     const { strategies, monitoring, db } = createStores();
     const strategy = await strategies.createForOwner('owner-a', {
