@@ -281,10 +281,16 @@ void main() {
                 lastUpdated: DateTime(2026, 10, 20),
                 entryDate: DateTime(2026, 10, 15),
                 expiryDate: DateTime(2026, 11, 26),
+                thresholds: StrategyThresholds(
+                  cautionPercent: 5,
+                  criticalPercent: 7,
+                  breachedPercent: 9,
+                ),
               ),
               onEditEntry: _noop,
               onEditEntryDate: _noop,
               onEditExpiry: _noop,
+              onEditThresholds: _noop,
             ),
           ),
         ),
@@ -293,6 +299,9 @@ void main() {
       expect(find.text('Entry date'), findsOneWidget);
       expect(find.text('2026-10-15'), findsOneWidget);
       expect(find.text('Edit entry date'), findsOneWidget);
+      expect(find.text('Risk thresholds'), findsOneWidget);
+      expect(find.text('5.0% / 7.0% / 9.0%'), findsOneWidget);
+      expect(find.text('Risk thresholds'), findsWidgets);
       expect(find.text('Expiry date'), findsOneWidget);
       expect(find.text('2026-11-26'), findsOneWidget);
       expect(find.text('Edit expiry'), findsOneWidget);
