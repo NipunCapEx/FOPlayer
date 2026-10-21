@@ -276,6 +276,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       symbol: 'RELIANCE',
       entryPrice: 1200,
       active: true,
+      entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
     });
 
@@ -290,6 +291,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     await expect(strategies.listForOwner('owner-a')).resolves.toMatchObject([
       expect.objectContaining({
         id: original.id,
+        entryDate: '2026-10-16',
         expiryDate: '2026-11-26',
       }),
     ]);
