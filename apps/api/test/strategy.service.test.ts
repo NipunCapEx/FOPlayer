@@ -115,7 +115,11 @@ describe('StrategyService', () => {
     }
     await expect(
       service.update('owner-1', 'strategy-1', {
-        thresholds: { cautionPercent: 10, criticalPercent: 8, breachedPercent: 12 },
+        thresholds: {
+          cautionPercent: 10,
+          criticalPercent: 8,
+          breachedPercent: 12,
+        },
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
