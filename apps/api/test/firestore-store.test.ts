@@ -314,6 +314,53 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('rejects reactivation when another active record already owns the symbol', async () => {
+    const { db, strategies } = createStores();
+    const stable = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    await strategies.updateForOwner('owner-a', stable.id, { active: false });
+    await db.collection('strategies').doc('legacy-active').set({
+      ownerUid: 'owner-a',
+      symbol: 'RELIANCE',
+      entryPrice: 1100,
+      active: true,
+      createdAt: new Date('2026-10-01T00:00:00Z'),
+      updatedAt: new Date('2026-10-01T00:00:00Z'),
+    });
+
+    await expect(
+      strategies.updateForOwner('owner-a', stable.id, { active: true }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects a conflicting record at the deterministic owner-symbol identity', async () => {
+    const { db, strategies } = createStores();
+    const id = createHash('sha256')
+      .update('owner-a')
+      .update('\\0')
+      .update('RELIANCE')
+      .digest('hex');
+    await db.collection('strategies').doc(id).set({
+      ownerUid: 'owner-a',
+      symbol: 'JSWSTEEL',
+      entryPrice: 900,
+      active: false,
+      createdAt: new Date('2026-10-01T00:00:00Z'),
+      updatedAt: new Date('2026-10-01T00:00:00Z'),
+    });
+
+    await expect(
+      strategies.createForOwner('owner-a', {
+        symbol: 'RELIANCE',
+        entryPrice: 1000,
+        active: true,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
   it('filters malformed strategy documents', async () => {
     const { db, strategies } = createStores();
     await db.collection('strategies').doc('bad-symbol').set({
