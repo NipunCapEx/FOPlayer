@@ -1,7 +1,10 @@
 import type { AlertDispatcher, RiskAlert } from './monitoring.js';
 
 export interface NotificationDeliveryStateStore {
-  hasDeliveredTarget(idempotencyKey: string, targetKey: string): Promise<boolean>;
+  hasDeliveredTarget(
+    idempotencyKey: string,
+    targetKey: string,
+  ): Promise<boolean>;
   markTargetDelivered(
     idempotencyKey: string,
     targetKey: string,
@@ -90,7 +93,9 @@ export class FcmTransport implements NotificationTransport {
             )
           : delivered.has(token),
       })),
-    ).then((items) => items.filter((item) => !item.delivered).map((item) => item.token));
+    ).then((items) =>
+      items.filter((item) => !item.delivered).map((item) => item.token),
+    );
     const results = await Promise.allSettled(
       unsentTokens.map(async (token) => {
         await this.sender.sendMessage({
@@ -153,7 +158,9 @@ export class MultiChannelDispatcher implements AlertDispatcher {
         };
       }),
     );
-    const unsent = channelStates.filter(({ delivered: wasDelivered }) => !wasDelivered);
+    const unsent = channelStates.filter(
+      ({ delivered: wasDelivered }) => !wasDelivered,
+    );
     const results = await Promise.allSettled(
       unsent.map(async ({ transport, index, targetKey }) => {
         await transport.send(alert);
