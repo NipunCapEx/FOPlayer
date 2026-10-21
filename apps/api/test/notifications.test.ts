@@ -293,7 +293,11 @@ describe('FcmTransport', () => {
   it('deactivates unregistered tokens and still delivers to healthy devices', async () => {
     const sendMessage = vi.fn(async (input: { token: string }) => {
       if (input.token === 'stale-device') {
-        throw new FcmDeliveryError('FCM delivery failed with HTTP 404', 404, 'UNREGISTERED');
+        throw new FcmDeliveryError(
+          'FCM delivery failed with HTTP 404',
+          404,
+          'UNREGISTERED',
+        );
       }
     });
     const deactivateDeviceToken = vi.fn(async (_token: string) => {});
@@ -351,7 +355,11 @@ describe('FcmTransport', () => {
 
   it('does not treat a payload or server error as an invalid token', async () => {
     const sendMessage = vi.fn(async () => {
-      throw new FcmDeliveryError('FCM delivery failed with HTTP 400', 400, 'INVALID_ARGUMENT');
+      throw new FcmDeliveryError(
+        'FCM delivery failed with HTTP 400',
+        400,
+        'INVALID_ARGUMENT',
+      );
     });
     const deactivateDeviceToken = vi.fn(async (_token: string) => {});
     const transport = new FcmTransport(
