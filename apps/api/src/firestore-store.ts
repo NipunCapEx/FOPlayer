@@ -329,7 +329,9 @@ export class FirestoreStrategyStore {
 }
 
 @Injectable()
-export class FirestoreMonitoringRepository implements MonitoringRepository {
+export class FirestoreMonitoringRepository
+  implements MonitoringRepository, NotificationDeliveryStateStore
+{
   private readonly ownerByStrategy = new Map<string, string>();
 
   constructor(private readonly firebase: FirebaseAdminService) {}
@@ -427,6 +429,37 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
       reason,
       checkedAt,
     });
+  }
+
+  async hasDeliveredTarget(
+    idempotencyKey: string,
+    targetKey: string,
+  ): Promise<boolean> {
+    const doc = await this.db
+      .collection('notificationDeliveries')
+      .doc(deliveryTargetDocumentId(idempotencyKey, targetKey))
+      .get();
+    const data = doc.data();
+    return (
+      doc.exists &&
+      data?.idempotencyKey === idempotencyKey &&
+      data?.targetKey === targetKey
+    );
+  }
+
+  async markTargetDelivered(
+    idempotencyKey: string,
+    targetKey: string,
+    deliveredAt: Date,
+  ): Promise<void> {
+    await this.db
+      .collection('notificationDeliveries')
+      .doc(deliveryTargetDocumentId(idempotencyKey, targetKey))
+      .set({
+        idempotencyKey,
+        targetKey,
+        deliveredAt,
+      });
   }
 
   async hasDeliveredOrQueuedAlert(idempotencyKey: string): Promise<boolean> {
@@ -601,6 +634,15 @@ function strategyDocumentId(ownerUid: string, symbol: SupportedSymbol): string {
     .update(ownerUid)
     .update('\0')
     .update(symbol)
+    .digest('hex');
+}
+
+function deliveryTargetDocumentId(
+  idempotencyKey: string,
+  targetKey: string,
+): string {
+  return createHash('sha256')
+    .update(`${idempotencyKey}:${targetKey}`)
     .digest('hex');
 }
 
