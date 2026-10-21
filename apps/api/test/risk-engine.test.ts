@@ -119,3 +119,38 @@ describe('assessRisk — business outcomes', () => {
     ).toThrow('symbol is not supported');
   });
 });
+
+
+describe('configurable risk thresholds', () => {
+  it('uses per-strategy thresholds for levels and structural boundaries', () => {
+    const assessment = assessRisk({
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      spotPrice: 1080,
+      thresholds: {
+        cautionPercent: 5,
+        criticalPercent: 7,
+        breachedPercent: 9,
+      },
+    });
+
+    expect(assessment.level).toBe('critical');
+    expect(assessment.lowerBoundary).toBe(910);
+    expect(assessment.upperBoundary).toBe(1090);
+  });
+
+  it('rejects non-increasing threshold configurations', () => {
+    expect(() =>
+      assessRisk({
+        symbol: 'RELIANCE',
+        entryPrice: 1000,
+        spotPrice: 1000,
+        thresholds: {
+          cautionPercent: 10,
+          criticalPercent: 8,
+          breachedPercent: 12,
+        },
+      }),
+    ).toThrow('thresholds must increase');
+  });
+});
