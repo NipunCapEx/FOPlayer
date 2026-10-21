@@ -31,6 +31,9 @@ function createService() {
       ...(input.thresholds !== undefined
         ? { thresholds: input.thresholds }
         : {}),
+      ...(input.notificationsEnabled !== undefined
+        ? { notificationsEnabled: input.notificationsEnabled }
+        : {}),
       createdAt: new Date('2026-10-20T10:00:00Z'),
       updatedAt: new Date('2026-10-20T10:00:00Z'),
     })),
