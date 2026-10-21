@@ -64,6 +64,10 @@ Let `E` be entry price and `P` be the latest validated spot price:
 
 Movement from entry and distance to a boundary are distinct metrics. Alert thresholds are based on movement from entry, not boundary-distance percentages.
 
+### Configurable per-strategy thresholds
+
+Default levels are 8% caution, 10% critical, and 12% breach. Users may configure strictly increasing positive percentages below 100%; the backend validates and persists these settings, and both monitoring and the Flutter dashboard use the saved values. Existing strategies without settings retain the defaults.
+
 ### Initial rules
 
 - Absolute movement reaches 8%: caution.
