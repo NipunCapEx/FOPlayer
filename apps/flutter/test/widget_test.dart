@@ -221,6 +221,24 @@ void main() {
       expect(find.byKey(const Key('save-new-symbol-button')), findsOneWidget);
     });
 
+    testWidgets('lets the user inspect a historical daily close',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PriceHistoryChart(values: [100, 110, 105]),
+          ),
+        ),
+      );
+
+      expect(find.text('Daily close trend'), findsOneWidget);
+      expect(find.text('Tap chart to inspect a daily close'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('price-history-chart')));
+      await tester.pump();
+
+      expect(find.text('Point 2: ₹110.00'), findsOneWidget);
+    });
+
     testWidgets('marks expired strategies and suppresses movement display',
         (tester) async {
       await tester.pumpWidget(
