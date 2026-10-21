@@ -122,6 +122,7 @@ void main() {
               auth: _UnusedFirebaseAuth(),
               baseUrl: 'http://invalid.example',
             ),
+            enablePushNotifications: false,
           ),
         ),
       );
