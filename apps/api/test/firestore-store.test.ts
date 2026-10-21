@@ -232,7 +232,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     ).resolves.toMatchObject({ entryPrice: 1200, active: false });
   });
 
-  it('enforces one active strategy per owner and symbol across concurrent creates', async () => {
+  it('rejects concurrent duplicate active strategies per owner and symbol', async () => {
     const { strategies } = createStores();
     const results = await Promise.allSettled([
       strategies.createForOwner('owner-a', {
@@ -247,14 +247,18 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       }),
     ]);
 
-    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
-    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === 'rejected'),
+    ).toHaveLength(1);
     expect(
       (await strategies.listForOwner('owner-a')).filter((item) => item.active),
     ).toHaveLength(1);
   });
 
-  it('reactivates an inactive strategy without discarding its history identity', async () => {
+  it('reactivates inactive strategies without losing their identity', async () => {
     const { strategies } = createStores();
     const original = await strategies.createForOwner('owner-a', {
       symbol: 'RELIANCE',
