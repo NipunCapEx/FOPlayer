@@ -148,7 +148,9 @@ export class RiskMonitor {
             symbol,
             entryPrice: strategy.entryPrice,
             spotPrice: snapshot.price,
-            thresholds: strategy.thresholds,
+            ...(strategy.thresholds !== undefined
+              ? { thresholds: strategy.thresholds }
+              : {}),
           });
         } catch {
           await this.repository.recordUnavailable(
