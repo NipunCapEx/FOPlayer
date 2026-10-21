@@ -230,12 +230,13 @@ describe('FcmTransport', () => {
         delivered.add(target);
       }),
     };
-    const sendMessage = vi
-      .fn(async (input: { token: string }) => {
-        if (input.token === 'device-2' && sendMessage.mock.calls.length === 2) {
-          throw new Error('temporary device failure');
-        }
-      });
+    let attempts = 0;
+    const sendMessage = vi.fn(async (input: { token: string }) => {
+      attempts += 1;
+      if (input.token === 'device-2' && attempts === 2) {
+        throw new Error('temporary device failure');
+      }
+    });
     const getTokens = async () => ['device-1', 'device-2'];
     const first = new FcmTransport({ sendMessage }, getTokens, deliveryState);
 
