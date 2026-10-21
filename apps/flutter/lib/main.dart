@@ -362,7 +362,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         spotPrice: 850,
         lastUpdated: now,
         isStale: true,
-        expiryDate: expiryDate,
       ),
     ];
     if (widget.apiClient != null) {
