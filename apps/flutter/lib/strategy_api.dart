@@ -84,7 +84,9 @@ class UserStrategy {
       active: active,
       entryDate: entryDate is String ? DateTime.tryParse(entryDate) : null,
       expiryDate: expiryDate is String ? DateTime.tryParse(expiryDate) : null,
-      thresholds: StrategyThresholds.fromJson(json['thresholds']),
+      thresholds: StrategyThresholds.fromJson(json['thresholds']).isValid
+          ? StrategyThresholds.fromJson(json['thresholds'])
+          : const StrategyThresholds(),
     );
   }
 }
