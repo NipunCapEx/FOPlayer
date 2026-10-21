@@ -741,4 +741,31 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
     );
     expect(await monitoring.listPendingAlerts()).toHaveLength(0);
   });
+
+  it('persists per-channel delivery checkpoints across repository instances', async () => {
+    const { db, monitoring } = createStores();
+    const firebase = {
+      get firestore() {
+        return db;
+      },
+    } as unknown as FirebaseAdminService;
+    const restartedRepository = new FirestoreMonitoringRepository(firebase);
+    const key = 'risk:strategy-1:episode-1:caution';
+
+    expect(await monitoring.hasDeliveredTarget(key, 'channel:telegram')).toBe(
+      false,
+    );
+    await monitoring.markTargetDelivered(
+      key,
+      'channel:telegram',
+      new Date('2026-10-21T12:00:00Z'),
+    );
+
+    expect(
+      await restartedRepository.hasDeliveredTarget(key, 'channel:telegram'),
+    ).toBe(true);
+    expect(
+      await restartedRepository.hasDeliveredTarget(key, 'channel:fcm'),
+    ).toBe(false);
+  });
 });
