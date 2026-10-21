@@ -411,7 +411,8 @@ function marketHoursPolicyFromEnvironment(): MarketHoursPolicy | null {
     : [];
   if (holidays.some((date) => !isIsoCalendarDate(date))) return null;
 
-  const configuredSessions = process.env.FOPLAYER_MARKET_SPECIAL_SESSIONS?.trim();
+  const configuredSessions =
+    process.env.FOPLAYER_MARKET_SPECIAL_SESSIONS?.trim();
   let specialSessions: Record<string, MarketSession> | undefined;
   if (configuredSessions) {
     let parsed: unknown;
