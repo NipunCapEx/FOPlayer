@@ -19,6 +19,7 @@ export interface CreateStrategyCommand {
   entryDate?: unknown;
   expiryDate?: unknown;
   thresholds?: unknown;
+  notificationsEnabled?: unknown;
 }
 
 export interface UpdateStrategyCommand {
@@ -27,6 +28,7 @@ export interface UpdateStrategyCommand {
   entryDate?: unknown;
   expiryDate?: unknown;
   thresholds?: unknown;
+  notificationsEnabled?: unknown;
 }
 
 @Injectable()
@@ -79,6 +81,13 @@ export class StrategyService {
       throw new BadRequestException('thresholds are invalid');
     }
 
+    if (
+      command.notificationsEnabled !== undefined &&
+      typeof command.notificationsEnabled !== 'boolean'
+    ) {
+      throw new BadRequestException('notificationsEnabled must be a boolean');
+    }
+
     return this.store.createForOwner(ownerUid, {
       symbol: command.symbol as SupportedSymbol,
       entryPrice: command.entryPrice,
@@ -92,6 +101,9 @@ export class StrategyService {
       ...(command.thresholds === undefined
         ? {}
         : { thresholds: command.thresholds as RiskThresholds }),
+      ...(command.notificationsEnabled === undefined
+        ? {}
+        : { notificationsEnabled: command.notificationsEnabled as boolean }),
     });
   }
 
@@ -106,6 +118,7 @@ export class StrategyService {
       expiryDate?: string;
       entryDate?: string;
       thresholds?: RiskThresholds;
+      notificationsEnabled?: boolean;
     } = {};
     if (command.entryPrice !== undefined) {
       if (!isPositiveFinite(command.entryPrice)) {
@@ -128,6 +141,12 @@ export class StrategyService {
         );
       }
       patch.entryDate = command.entryDate;
+    }
+    if (command.notificationsEnabled !== undefined) {
+      if (typeof command.notificationsEnabled !== 'boolean') {
+        throw new BadRequestException('notificationsEnabled must be a boolean');
+      }
+      patch.notificationsEnabled = command.notificationsEnabled;
     }
     if (command.thresholds !== undefined) {
       if (!isValidThresholds(command.thresholds)) {

@@ -218,6 +218,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
         criticalPercent: 8,
         breachedPercent: 10,
       },
+      notificationsEnabled: false,
     });
     await strategies.createForOwner('owner-b', {
       symbol: 'SBICARD',
@@ -226,6 +227,15 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     });
 
     expect(await strategies.listForOwner('owner-a')).toHaveLength(1);
+    expect(first.notificationsEnabled).toBe(false);
+    await expect(
+      strategies.updateForOwner('owner-a', first.id, {
+        notificationsEnabled: true,
+      }),
+    ).resolves.toMatchObject({ notificationsEnabled: true });
+    await expect(strategies.listForOwner('owner-a')).resolves.toMatchObject([
+      expect.objectContaining({ notificationsEnabled: true }),
+    ]);
     await expect(
       strategies.updateForOwner('owner-b', first.id, { active: false }),
     ).resolves.toBeNull();
@@ -706,6 +716,47 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
         createdAt: new Date(),
       }),
     ).rejects.toThrow('has no valid owner');
+  });
+
+  it('records muted alerts as suppressed without dispatching them', async () => {
+    const { strategies, monitoring, db } = createStores();
+    const strategy = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    await monitoring.listActiveStrategies();
+    const alert = {
+      idempotencyKey: 'risk:strategy-1:episode-1:muted',
+      strategyId: strategy.id,
+      symbol: 'RELIANCE' as const,
+      kind: 'critical' as const,
+      message: 'RELIANCE critical',
+      price: 1100,
+      movementPercent: 10,
+      createdAt: new Date('2026-10-20T10:00:00Z'),
+      notificationsEnabled: false,
+    };
+
+    await monitoring.enqueueAlert(alert);
+    await expect(monitoring.listPendingAlerts()).resolves.toMatchObject([
+      expect.objectContaining({ notificationsEnabled: false }),
+    ]);
+    await monitoring.markAlertSuppressed(
+      alert.idempotencyKey,
+      new Date('2026-10-20T10:01:00Z'),
+    );
+
+    await expect(monitoring.listPendingAlerts()).resolves.toHaveLength(0);
+    const alertId = createHash('sha256')
+      .update(alert.idempotencyKey)
+      .digest('hex');
+    expect(
+      (await db.collection('alerts').doc(alertId).get()).data(),
+    ).toMatchObject({
+      status: 'suppressed',
+      suppressionReason: 'strategy_notifications_disabled',
+    });
   });
 
   it('deduplicates alerts and retries pending outbox entries until delivered', async () => {
