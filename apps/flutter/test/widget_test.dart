@@ -36,7 +36,8 @@ void main() {
 
     test('seeds all four defaults for a brand-new user', () {
       expect(
-        defaultWatchlistItemsToSeed(templates, const []).map((item) => item.symbol),
+        defaultWatchlistItemsToSeed(templates, const [])
+            .map((item) => item.symbol),
         ['RELIANCE', 'JSWSTEEL', 'BHARTIARTL', 'SBICARD'],
       );
     });
@@ -52,12 +53,14 @@ void main() {
       ];
 
       expect(
-        defaultWatchlistItemsToSeed(templates, existing).map((item) => item.symbol),
+        defaultWatchlistItemsToSeed(templates, existing)
+            .map((item) => item.symbol),
         ['JSWSTEEL', 'BHARTIARTL', 'SBICARD'],
       );
     });
 
-    test('does not re-create inactive defaults or seed custom-only profiles', () {
+    test('does not re-create inactive defaults or seed custom-only profiles',
+        () {
       final allDefaultsIncludingRemoved = [
         for (final symbol in ['RELIANCE', 'JSWSTEEL', 'BHARTIARTL', 'SBICARD'])
           UserStrategy(
