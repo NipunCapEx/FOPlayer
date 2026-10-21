@@ -437,7 +437,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             entryPrice: item.entryPrice,
             entryDate: item.entryDate,
             expiryDate: item.expiryDate,
-            historicalCloses: snapshot?.historicalCloses ?? const [],
           );
         }
         dashboard = await apiClient.getDashboard();
@@ -468,6 +467,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 DateTime.fromMillisecondsSinceEpoch(0),
             isStale: !fresh,
             hasSpotPrice: hasSnapshot,
+            historicalCloses: snapshot?.historicalCloses ?? const [],
             dataSource: snapshot?.source,
             fetchedAt: snapshot?.fetchedAt,
           );
@@ -1539,9 +1539,7 @@ class _PriceHistoryChartState extends State<PriceHistoryChart> {
     final values = widget.values.length > 30
         ? widget.values.skip(widget.values.length - 30).toList()
         : widget.values;
-    final index = selectedIndex == null
-        ? null
-        : selectedIndex!.clamp(0, values.length - 1).toInt();
+    final index = selectedIndex?.clamp(0, values.length - 1).toInt();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
