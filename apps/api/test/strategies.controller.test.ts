@@ -96,6 +96,7 @@ describe('StrategiesController', () => {
     });
     expect(service.update).toHaveBeenCalledWith('verified-user', 'strategy-1', {
       active: false,
+      entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
     });
 
