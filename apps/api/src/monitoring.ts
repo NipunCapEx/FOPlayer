@@ -405,11 +405,49 @@ export function isIndianEquityMarketOpen(
 }
 
 function marketHoursPolicyFromEnvironment(): MarketHoursPolicy | null {
-  const configured = process.env.FOPLAYER_MARKET_HOLIDAYS?.trim();
-  if (!configured) return {};
-  const holidays = configured.split(',').map((date) => date.trim());
+  const configuredHolidays = process.env.FOPLAYER_MARKET_HOLIDAYS?.trim();
+  const holidays = configuredHolidays
+    ? configuredHolidays.split(',').map((date) => date.trim())
+    : [];
   if (holidays.some((date) => !isIsoCalendarDate(date))) return null;
-  return { holidays };
+
+  const configuredSessions = process.env.FOPLAYER_MARKET_SPECIAL_SESSIONS?.trim();
+  let specialSessions: Record<string, MarketSession> | undefined;
+  if (configuredSessions) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(configuredSessions);
+    } catch {
+      return null;
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+    specialSessions = {};
+    for (const [date, session] of Object.entries(parsed)) {
+      if (
+        !isIsoCalendarDate(date) ||
+        !session ||
+        typeof session !== 'object' ||
+        Array.isArray(session) ||
+        !('open' in session) ||
+        !('close' in session) ||
+        typeof session.open !== 'string' ||
+        typeof session.close !== 'string'
+      ) {
+        return null;
+      }
+      const open = parseMarketClock(session.open);
+      const close = parseMarketClock(session.close);
+      if (open === null || close === null || open > close) return null;
+      specialSessions[date] = { open: session.open, close: session.close };
+    }
+  }
+
+  return {
+    ...(holidays.length > 0 ? { holidays } : {}),
+    ...(specialSessions ? { specialSessions } : {}),
+  };
 }
 
 function parseMarketClock(value: string): number | null {
