@@ -162,6 +162,7 @@ describe('StrategyService', () => {
           criticalPercent: 8,
           breachedPercent: 10,
         },
+        notificationsEnabled: false,
       }),
     ).resolves.toMatchObject({
       entryPrice: 1500,
@@ -173,6 +174,7 @@ describe('StrategyService', () => {
         criticalPercent: 8,
         breachedPercent: 10,
       },
+      notificationsEnabled: false,
     });
     await expect(
       service.update('owner-1', 'strategy-1', { entryPrice: 0 }),
@@ -185,6 +187,9 @@ describe('StrategyService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update('owner-1', 'strategy-1', { active: 'false' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.update('owner-1', 'strategy-1', { notificationsEnabled: 'false' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update('owner-1', 'strategy-1', {}),
