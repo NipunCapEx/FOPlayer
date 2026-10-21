@@ -36,6 +36,7 @@ class Instrument {
     this.fetchedAt,
     this.entryDate,
     this.expiryDate,
+    this.historicalCloses = const [],
   });
 
   final String symbol;
@@ -49,6 +50,7 @@ class Instrument {
   final DateTime? fetchedAt;
   final DateTime? entryDate;
   final DateTime? expiryDate;
+  final List<double> historicalCloses;
 
   bool get isExpired {
     final expiry = expiryDate;
@@ -97,6 +99,7 @@ class Instrument {
     DateTime? fetchedAt,
     DateTime? entryDate,
     DateTime? expiryDate,
+    List<double>? historicalCloses,
   }) =>
       Instrument(
         symbol: symbol,
@@ -110,6 +113,7 @@ class Instrument {
         fetchedAt: fetchedAt ?? this.fetchedAt,
         entryDate: entryDate ?? this.entryDate,
         expiryDate: expiryDate ?? this.expiryDate,
+        historicalCloses: historicalCloses ?? this.historicalCloses,
       );
 }
 
@@ -463,6 +467,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 DateTime.fromMillisecondsSinceEpoch(0),
             isStale: !fresh,
             hasSpotPrice: hasSnapshot,
+            historicalCloses: snapshot?.historicalCloses ?? const [],
             dataSource: snapshot?.source,
             fetchedAt: snapshot?.fetchedAt,
           );
@@ -1425,6 +1430,11 @@ class InstrumentCard extends StatelessWidget {
             ),
             const Divider(height: 28),
             _PriceRow(label: 'Entry', value: instrument.entryPrice),
+            if (instrument.historicalCloses.length >= 2)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: PriceHistoryChart(values: instrument.historicalCloses),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(
@@ -1510,6 +1520,115 @@ class InstrumentCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class PriceHistoryChart extends StatefulWidget {
+  const PriceHistoryChart({required this.values, super.key});
+
+  final List<double> values;
+
+  @override
+  State<PriceHistoryChart> createState() => _PriceHistoryChartState();
+}
+
+class _PriceHistoryChartState extends State<PriceHistoryChart> {
+  int? selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = widget.values.length > 30
+        ? widget.values.skip(widget.values.length - 30).toList()
+        : widget.values;
+    final index = selectedIndex?.clamp(0, values.length - 1).toInt();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Daily close trend'),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 90,
+          width: double.infinity,
+          child: LayoutBuilder(
+            builder: (context, constraints) => GestureDetector(
+              key: const Key('price-history-chart'),
+              behavior: HitTestBehavior.opaque,
+              onTapDown: (details) {
+                if (values.length < 2 || constraints.maxWidth <= 0) return;
+                final ratio = (details.localPosition.dx / constraints.maxWidth)
+                    .clamp(0.0, 1.0);
+                setState(() {
+                  selectedIndex = (ratio * (values.length - 1)).round();
+                });
+              },
+              child: CustomPaint(
+                size: Size(constraints.maxWidth, 90),
+                painter: _PriceHistoryPainter(
+                  values: values,
+                  selectedIndex: index,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Text(
+          index == null
+              ? 'Tap chart to inspect a daily close'
+              : 'Point ${index + 1}: ₹${values[index].toStringAsFixed(2)}',
+        ),
+      ],
+    );
+  }
+}
+
+class _PriceHistoryPainter extends CustomPainter {
+  const _PriceHistoryPainter(
+      {required this.values, required this.selectedIndex});
+
+  final List<double> values;
+  final int? selectedIndex;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2 || size.width <= 0 || size.height <= 0) return;
+    final minimum = values.reduce((a, b) => a < b ? a : b);
+    final maximum = values.reduce((a, b) => a > b ? a : b);
+    final range = maximum - minimum;
+    final points = <Offset>[
+      for (var i = 0; i < values.length; i++)
+        Offset(
+          i * size.width / (values.length - 1),
+          size.height -
+              8 -
+              (range == 0 ? 0.5 : (values[i] - minimum) / range) *
+                  (size.height - 16),
+        ),
+    ];
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.teal
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke,
+    );
+    final selected = selectedIndex;
+    if (selected != null && selected >= 0 && selected < points.length) {
+      canvas.drawCircle(
+        points[selected],
+        4,
+        Paint()..color = Colors.orange,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PriceHistoryPainter oldDelegate) =>
+      oldDelegate.values != values ||
+      oldDelegate.selectedIndex != selectedIndex;
 }
 
 class _PriceRow extends StatelessWidget {

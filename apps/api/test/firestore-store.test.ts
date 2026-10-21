@@ -482,6 +482,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       new Date('2026-10-20T10:00:00Z'),
     );
     expect(dashboard.snapshots[1]?.recordedAt.getTime()).toBe(0);
+    expect(dashboard.snapshots[1]?.historicalCloses).toEqual([]);
     expect(dashboard.alerts.map((alert) => alert.id)).toEqual(['own-alert']);
   });
 
@@ -576,6 +577,13 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
 
     expect(await monitoring.getRiskEpisodeState(strategy.id)).toBeNull();
     await monitoring.recordAssessment(strategy.id, assessment, snapshot);
+    await expect(strategies.getDashboard('owner-a')).resolves.toMatchObject({
+      snapshots: [
+        expect.objectContaining({
+          historicalCloses: [100, 101, 102, 103, 104, 105],
+        }),
+      ],
+    });
     await monitoring.saveRiskEpisodeState(strategy.id, {
       episode: 2,
       highestSeverity: 1,
