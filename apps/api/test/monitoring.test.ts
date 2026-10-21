@@ -449,6 +449,41 @@ describe('Indian equity market schedule', () => {
     }
   });
 
+  it('loads configured special sessions from server configuration', () => {
+    vi.stubEnv(
+      'FOPLAYER_MARKET_SPECIAL_SESSIONS',
+      '{"2026-10-24":{"open":"18:00","close":"19:00"}}',
+    );
+    try {
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-10-24T12:30:00.000Z')),
+      ).toBe(true);
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-10-24T12:00:00.000Z')),
+      ).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('fails closed for malformed special-session JSON, dates, or times', () => {
+    for (const value of [
+      '{bad-json',
+      '{"2026-02-30":{"open":"18:00","close":"19:00"}}',
+      '{"2026-10-24":{"open":"19:00","close":"18:00"}}',
+      '{"2026-10-24":{"open":"25:00","close":"26:00"}}',
+    ]) {
+      vi.stubEnv('FOPLAYER_MARKET_SPECIAL_SESSIONS', value);
+      try {
+        expect(
+          isIndianEquityMarketOpen(new Date('2026-10-24T12:30:00.000Z')),
+        ).toBe(false);
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    }
+  });
+
   it('supports a special session outside normal hours, including weekends', () => {
     expect(
       isIndianEquityMarketOpen(new Date('2026-10-24T12:30:00.000Z'), {

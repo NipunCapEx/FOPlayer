@@ -20,6 +20,7 @@
 - Configure Firebase project/database identifiers and credentials using environment-specific settings.
 - Store Telegram bot token, Firebase service-account credentials and deployment credentials only in approved secret stores.
 - Configure `FOPLAYER_MARKET_HOLIDAYS` on the backend as a comma-separated list of ISO dates (`YYYY-MM-DD`) from the current official exchange holiday calendar. If any configured date is malformed, monitoring fails closed until the value is corrected.
+- Configure `FOPLAYER_MARKET_SPECIAL_SESSIONS` as a JSON object keyed by ISO date, with each value containing `open` and `close` in 24-hour `HH:MM` IST time (for example, `{"2026-10-24":{"open":"18:00","close":"19:00"}}`). This supports official special sessions such as Muhurat trading. Invalid JSON, dates, or times fail closed; keep this list current from official exchange notices.
 - Never embed privileged credentials in Flutter web/mobile assets or commit them to source control.
 - Apply least privilege and review Firebase rules before enabling production traffic.
 
