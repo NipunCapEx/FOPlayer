@@ -70,7 +70,7 @@ void main() {
       final customOnly = [
         const UserStrategy(
           id: 'strategy-custom',
-          symbol: 'RELIANCE',
+          symbol: 'CUSTOM',
           entryPrice: 1000,
           active: true,
         ),
