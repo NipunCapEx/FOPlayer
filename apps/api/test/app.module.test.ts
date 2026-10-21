@@ -56,6 +56,17 @@ it('reports Telegram configured only for a single allowlisted UID', () => {
   }
 });
 
+it('reports invalid market-hours configuration without exposing its value', () => {
+  process.env.FOPLAYER_MARKET_HOLIDAYS = '2026-02-30';
+  const controller = new HealthController({
+    isConfigured: false,
+  } as FirebaseAdminService);
+
+  const health = controller.getHealth();
+  expect(health.marketHoursConfigurationValid).toBe(false);
+  expect(JSON.stringify(health)).not.toContain('2026-02-30');
+});
+
 describe('AppModule runtime wiring', () => {
   it('boots health-only mode without privileged credentials and never reports secrets', async () => {
     for (const key of keys) delete process.env[key];
@@ -69,6 +80,7 @@ describe('AppModule runtime wiring', () => {
         status: 'ok',
         service: 'foplayer-api',
         firebaseConfigured: false,
+        marketHoursConfigurationValid: true,
         marketDataAdapter: 'yahoo-finance-prototype',
         telegramConfigured: false,
         androidPushConfigured: false,
