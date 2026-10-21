@@ -302,6 +302,9 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
         entryPrice: record.entryPrice,
         active: record.active,
         ownerUid: record.ownerUid,
+        ...(record.expiryDate !== undefined
+          ? { expiryDate: record.expiryDate }
+          : {}),
       });
     }
     return strategies;
