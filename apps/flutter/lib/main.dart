@@ -397,10 +397,16 @@ Instrument mapUserStrategyToInstrument(
 }
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, this.onSignOut, this.apiClient});
+  const DashboardScreen({
+    super.key,
+    this.onSignOut,
+    this.apiClient,
+    this.enablePushNotifications = true,
+  });
 
   final VoidCallback? onSignOut;
   final StrategyApiClient? apiClient;
+  final bool enablePushNotifications;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -456,7 +462,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ? List<Instrument>.of(_defaultWatchlistTemplates)
         : <Instrument>[];
     if (widget.apiClient != null) {
-      if (!kIsWeb) {
+      if (!kIsWeb && widget.enablePushNotifications) {
         final messaging = FirebaseMessaging.instance;
         _notificationRegistration = NotificationRegistrationService(
           requestPermission: () async {
