@@ -512,6 +512,7 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
       symbol: 'RELIANCE',
       entryPrice: 1000,
       active: true,
+      expiryDate: '2026-11-26',
     });
     await strategies.createForOwner('owner-b', {
       symbol: 'JSWSTEEL',
