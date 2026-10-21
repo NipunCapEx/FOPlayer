@@ -88,7 +88,11 @@ describe('StrategyService', () => {
       service.create('owner-1', {
         symbol: 'RELIANCE',
         entryPrice: 100,
-        thresholds: { cautionPercent: 10, criticalPercent: 8, breachedPercent: 12 },
+        thresholds: {
+          cautionPercent: 10,
+          criticalPercent: 8,
+          breachedPercent: 12,
+        },
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
