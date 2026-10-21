@@ -79,6 +79,7 @@ describe('StrategiesController', () => {
       entryPrice: 1000,
       entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
+      thresholds: { cautionPercent: 5, criticalPercent: 7, breachedPercent: 9 },
       ownerUid: 'attacker',
     });
     expect(service.create).toHaveBeenCalledWith('verified-user', {
@@ -86,18 +87,21 @@ describe('StrategiesController', () => {
       entryPrice: 1000,
       entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
+      thresholds: { cautionPercent: 5, criticalPercent: 7, breachedPercent: 9 },
     });
 
     await controller.updateStrategy(request, 'strategy-1', {
       active: false,
       entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
+      thresholds: { cautionPercent: 6, criticalPercent: 8, breachedPercent: 10 },
       ownerUid: 'attacker',
     });
     expect(service.update).toHaveBeenCalledWith('verified-user', 'strategy-1', {
       active: false,
       entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
+      thresholds: { cautionPercent: 6, criticalPercent: 8, breachedPercent: 10 },
     });
 
     await controller.createStrategy(request, {
