@@ -12,6 +12,7 @@ export interface Strategy {
   entryPrice: number;
   active: boolean;
   ownerUid?: string;
+  expiryDate?: string;
 }
 
 export type AlertKind =
@@ -101,8 +102,10 @@ export class RiskMonitor {
   }
 
   async runOnce(): Promise<void> {
+    const cycleStartedAt = this.now();
     const strategies = (await this.repository.listActiveStrategies()).filter(
-      (s) => s.active,
+      (strategy) =>
+        strategy.active && !isExpiredStrategy(strategy, cycleStartedAt),
     );
     const symbols = [...new Set(strategies.map((s) => s.symbol))];
 
@@ -452,4 +455,31 @@ export class PollingWorker {
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
   }
+}
+
+function isExpiredStrategy(strategy: Strategy, now: Date): boolean {
+  const expiryDate = strategy.expiryDate;
+  if (expiryDate === undefined) return false;
+  if (!isIsoCalendarDate(expiryDate)) return true;
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const value = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  const today = `${value('year')}-${value('month')}-${value('day')}`;
+  // Expiry remains valid through the expiry date in the Indian market timezone.
+  return expiryDate < today;
+}
+
+function isIsoCalendarDate(value: string): boolean {
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
 }

@@ -48,8 +48,16 @@ class Instrument {
   final DateTime? fetchedAt;
   final DateTime? expiryDate;
 
+  bool get isExpired {
+    final expiry = expiryDate;
+    return expiry != null &&
+        DateUtils.dateOnly(expiry).isBefore(
+          DateUtils.dateOnly(DateTime.now()),
+        );
+  }
+
   bool get isCurrentlyStale {
-    if (isStale) return true;
+    if (isStale || isExpired) return true;
     final fetched = fetchedAt;
     if (fetched == null) return false;
     const maxAge = Duration(minutes: 10);
@@ -68,7 +76,7 @@ class Instrument {
   double get movementPercent => (spotPrice - entryPrice) / entryPrice * 100;
 
   RiskLevel get riskLevel {
-    if (isStale) return RiskLevel.normal;
+    if (isStale || isExpired) return RiskLevel.normal;
     // Use the entry-relative percentage for threshold comparisons to avoid
     // floating-point boundary rounding at exactly ±12%.
     if (movementPercent.abs() >= 12) return RiskLevel.breached;
@@ -1189,14 +1197,16 @@ class InstrumentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final level = instrument.riskLevel;
     final snapshotTime = instrument.lastUpdated.toString().substring(0, 16);
-    final levelLabel = instrument.isCurrentlyStale
-        ? 'DATA STALE'
-        : switch (level) {
-            RiskLevel.normal => 'NORMAL',
-            RiskLevel.caution => 'CAUTION',
-            RiskLevel.critical => 'CRITICAL',
-            RiskLevel.breached => 'BREACHED',
-          };
+    final levelLabel = instrument.isExpired
+        ? 'EXPIRED'
+        : instrument.isCurrentlyStale
+            ? 'DATA STALE'
+            : switch (level) {
+                RiskLevel.normal => 'NORMAL',
+                RiskLevel.caution => 'CAUTION',
+                RiskLevel.critical => 'CRITICAL',
+                RiskLevel.breached => 'BREACHED',
+              };
     final color = instrument.isCurrentlyStale
         ? Colors.blueGrey
         : switch (level) {
@@ -1314,11 +1324,13 @@ class InstrumentCard extends StatelessWidget {
             const SizedBox(height: 10),
             if (instrument.isCurrentlyStale)
               Text(
-                isDemo
-                    ? 'Snapshot is stale. No actionable risk state is shown.'
-                    : instrument.hasSpotPrice
-                        ? 'Snapshot is stale. Last observed at $snapshotTime from ${instrument.dataSource ?? 'unknown'}. No actionable risk state is shown.'
-                        : 'No validated market snapshot is available. No actionable risk state is shown.',
+                instrument.isExpired
+                    ? 'Strategy expired. No actionable risk state is shown.'
+                    : isDemo
+                        ? 'Snapshot is stale. No actionable risk state is shown.'
+                        : instrument.hasSpotPrice
+                            ? 'Snapshot is stale. Last observed at $snapshotTime from ${instrument.dataSource ?? 'unknown'}. No actionable risk state is shown.'
+                            : 'No validated market snapshot is available. No actionable risk state is shown.',
                 key: const Key('stale-message'),
               )
             else

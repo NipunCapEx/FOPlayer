@@ -120,6 +120,45 @@ describe('Snapshot validation rejects stale and invalid market data', () => {
     expect(harness.alerts).toHaveLength(0);
   });
 
+  it('does not request prices or emit alerts for strategies past expiry', async () => {
+    const harness = createHarness(1120);
+    vi.mocked(harness.repository.listActiveStrategies).mockResolvedValueOnce([
+      { ...strategy, expiryDate: '2026-10-19' },
+    ]);
+
+    await harness.monitor.runOnce();
+
+    expect(harness.provider.getSnapshot).not.toHaveBeenCalled();
+    expect(harness.repository.recordAssessment).not.toHaveBeenCalled();
+    expect(harness.alerts).toHaveLength(0);
+  });
+
+  it('keeps a strategy eligible throughout its expiry date in India', async () => {
+    const harness = createHarness();
+    vi.mocked(harness.repository.listActiveStrategies).mockResolvedValueOnce([
+      { ...strategy, expiryDate: '2026-10-20' },
+    ]);
+
+    await harness.monitor.runOnce();
+
+    expect(harness.provider.getSnapshot).toHaveBeenCalledWith('RELIANCE');
+    expect(harness.repository.recordAssessment).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed for malformed configured expiry dates', async () => {
+    for (const expiryDate of ['not-a-date', '2026-02-30']) {
+      const harness = createHarness();
+      vi.mocked(harness.repository.listActiveStrategies).mockResolvedValueOnce([
+        { ...strategy, expiryDate },
+      ]);
+
+      await harness.monitor.runOnce();
+
+      expect(harness.provider.getSnapshot).not.toHaveBeenCalled();
+      expect(harness.repository.recordAssessment).not.toHaveBeenCalled();
+    }
+  });
+
   it('rejects stale exchange data even when it was just fetched', () => {
     const staleExchangeTime = new Date(now.getTime() - 11 * 60 * 1000);
     expect(
