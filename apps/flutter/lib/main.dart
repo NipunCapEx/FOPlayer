@@ -1541,7 +1541,7 @@ class _PriceHistoryChartState extends State<PriceHistoryChart> {
         : widget.values;
     final index = selectedIndex == null
         ? null
-        : selectedIndex!.clamp(0, values.length - 1);
+        : selectedIndex!.clamp(0, values.length - 1).toInt();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
