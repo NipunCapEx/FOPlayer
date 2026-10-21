@@ -92,12 +92,12 @@ describe('runtime market-hours environment configuration', () => {
         '2026-11-08': { open: '18:00', close: '19:00' },
       },
     });
-    expect(
-      isIndianEquityMarketOpen(new Date('2026-11-08T12:30:00.000Z')),
-    ).toBe(true);
-    expect(
-      isIndianEquityMarketOpen(new Date('2026-11-09T04:00:00.000Z')),
-    ).toBe(false);
+    expect(isIndianEquityMarketOpen(new Date('2026-11-08T12:30:00.000Z'))).toBe(
+      true,
+    );
+    expect(isIndianEquityMarketOpen(new Date('2026-11-09T04:00:00.000Z'))).toBe(
+      false,
+    );
   });
 
   it('fails closed for invalid holiday, clock, or special-session configuration', () => {
@@ -105,8 +105,14 @@ describe('runtime market-hours environment configuration', () => {
       ['FOPLAYER_MARKET_HOLIDAYS', '2026-02-30'],
       ['FOPLAYER_MARKET_OPEN', '25:00'],
       ['FOPLAYER_MARKET_CLOSE', '08:00'],
-      ['FOPLAYER_MARKET_SPECIAL_SESSIONS', '{"2026-02-30":{"open":"18:00","close":"19:00"}}'],
-      ['FOPLAYER_MARKET_SPECIAL_SESSIONS', '{"2026-11-08":{"open":"19:00","close":"18:00"}}'],
+      [
+        'FOPLAYER_MARKET_SPECIAL_SESSIONS',
+        '{"2026-02-30":{"open":"18:00","close":"19:00"}}',
+      ],
+      [
+        'FOPLAYER_MARKET_SPECIAL_SESSIONS',
+        '{"2026-11-08":{"open":"19:00","close":"18:00"}}',
+      ],
     ] as const) {
       process.env.FOPLAYER_MARKET_OPEN = '';
       process.env.FOPLAYER_MARKET_CLOSE = '';
