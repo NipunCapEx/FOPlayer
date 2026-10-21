@@ -46,6 +46,7 @@ export const ALERT_DISPATCHER = Symbol('ALERT_DISPATCHER');
       useFactory: (
         firebase: FirebaseAdminService,
         strategyStore: FirestoreStrategyStore,
+        repository: FirestoreMonitoringRepository,
       ): AlertDispatcher => {
         const transports: NotificationTransport[] = [];
         const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -66,12 +67,17 @@ export const ALERT_DISPATCHER = Symbol('ALERT_DISPATCHER');
               ),
               (strategyId) =>
                 strategyStore.listDeviceTokensForStrategy(strategyId),
+              repository,
             ),
           );
         }
-        return new MultiChannelDispatcher(transports);
+        return new MultiChannelDispatcher(transports, repository);
       },
-      inject: [FirebaseAdminService, FirestoreStrategyStore],
+      inject: [
+        FirebaseAdminService,
+        FirestoreStrategyStore,
+        FirestoreMonitoringRepository,
+      ],
     },
     {
       provide: RiskMonitor,
