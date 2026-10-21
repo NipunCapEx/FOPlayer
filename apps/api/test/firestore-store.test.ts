@@ -551,10 +551,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       token: 'device-token',
       active: true,
     });
-    await db
-      .collection('deviceTokens')
-      .doc('duplicate-token-association')
-      .set({
+    await db.collection('deviceTokens').doc('duplicate-token-association').set({
       ownerUid: 'owner-a',
       strategyId: strategy.id,
       token: 'device-token',
