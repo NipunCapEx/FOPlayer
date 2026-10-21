@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foplayer/main.dart';
+import 'package:foplayer/strategy_api.dart';
 
 void main() {
   testWidgets('shows Google login entry point', (tester) async {
