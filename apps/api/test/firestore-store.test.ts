@@ -548,6 +548,7 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
     const { db, strategies } = createStores();
     const invalidThresholds: unknown[] = [
       null,
+      'not-an-object',
       { cautionPercent: '5', criticalPercent: 7, breachedPercent: 9 },
       { cautionPercent: Number.NaN, criticalPercent: 7, breachedPercent: 9 },
       { cautionPercent: 0, criticalPercent: 7, breachedPercent: 9 },
