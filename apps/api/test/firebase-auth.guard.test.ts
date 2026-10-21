@@ -32,7 +32,7 @@ describe('FirebaseAuthGuard', () => {
     const guard = new FirebaseAuthGuard(firebase);
 
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
-    expect(verifyIdToken).toHaveBeenCalledWith('valid-token');
+    expect(verifyIdToken).toHaveBeenCalledWith('valid-token', true);
     expect(request.user).toEqual({
       uid: 'user-1',
       email: 'user@example.test',
@@ -75,6 +75,27 @@ describe('FirebaseAuthGuard', () => {
     await expect(guard.canActivate(contextFor(request))).rejects.toThrow(
       'Firebase ID token is invalid or expired',
     );
+  });
+
+  it('rejects revoked Firebase ID tokens by requesting revocation checking', async () => {
+    const request: AuthenticatedRequest = {
+      headers: { authorization: 'Bearer revoked-token' },
+    };
+    const verifyIdToken = vi.fn(
+      async (_token: string, checkRevoked?: boolean) => {
+        expect(checkRevoked).toBe(true);
+        throw new Error('auth/id-token-revoked');
+      },
+    );
+    const guard = new FirebaseAuthGuard({
+      auth: { verifyIdToken },
+    } as unknown as FirebaseAdminService);
+
+    await expect(guard.canActivate(contextFor(request))).rejects.toThrow(
+      'Firebase ID token is invalid or expired',
+    );
+    expect(verifyIdToken).toHaveBeenCalledWith('revoked-token', true);
+    expect(request.user).toBeUndefined();
   });
 
   it('enforces the configured UID allowlist and omits absent email claims', async () => {
