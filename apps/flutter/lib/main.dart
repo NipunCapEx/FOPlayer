@@ -486,7 +486,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // strategy already. Only suppress the error when the server confirms
           // that this symbol now exists; otherwise keep the retryable error.
           final latestStrategies = await apiClient.listStrategies();
-          if (!latestStrategies.any((strategy) => strategy.symbol == item.symbol)) {
+          if (!latestStrategies
+              .any((strategy) => strategy.symbol == item.symbol)) {
             rethrow;
           }
         }
