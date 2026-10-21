@@ -283,7 +283,12 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       expiryDate: '2026-11-26',
       ownerUid: 'owner-a',
     });
-    expect(await strategies.listForOwner('owner-a')).toHaveLength(1);
+    await expect(strategies.listForOwner('owner-a')).resolves.toMatchObject([
+      expect.objectContaining({
+        id: original.id,
+        expiryDate: '2026-11-26',
+      }),
+    ]);
   });
 
   it('allows reactivation only through the stable owner-symbol identity', async () => {
