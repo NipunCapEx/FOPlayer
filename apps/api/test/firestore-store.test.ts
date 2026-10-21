@@ -340,7 +340,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     const { db, strategies } = createStores();
     const id = createHash('sha256')
       .update('owner-a')
-      .update('\\0')
+      .update('\0')
       .update('RELIANCE')
       .digest('hex');
     await db.collection('strategies').doc(id).set({
