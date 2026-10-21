@@ -383,8 +383,8 @@ Instrument mapUserStrategyToInstrument(
     thresholds: strategy.thresholds,
     notificationsEnabled: strategy.notificationsEnabled,
     spotPrice: snapshot?.spotPrice ?? strategy.entryPrice,
-    lastUpdated: snapshot?.exchangeTimestamp ??
-        DateTime.fromMillisecondsSinceEpoch(0),
+    lastUpdated:
+        snapshot?.exchangeTimestamp ?? DateTime.fromMillisecondsSinceEpoch(0),
     isStale: !fresh,
     hasSpotPrice: hasSnapshot,
     historicalCloses: snapshot?.historicalCloses ?? const [],
