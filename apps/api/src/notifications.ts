@@ -1,6 +1,19 @@
 import type { AlertDispatcher, RiskAlert } from './monitoring.js';
 
+export interface NotificationDeliveryStateStore {
+  hasDeliveredTarget(
+    idempotencyKey: string,
+    targetKey: string,
+  ): Promise<boolean>;
+  markTargetDelivered(
+    idempotencyKey: string,
+    targetKey: string,
+    deliveredAt: Date,
+  ): Promise<void>;
+}
+
 export interface NotificationTransport {
+  readonly deliveryKey?: string;
   send(alert: RiskAlert): Promise<void>;
 }
 
@@ -10,6 +23,8 @@ export interface TelegramConfig {
 }
 
 export class TelegramTransport implements NotificationTransport {
+  readonly deliveryKey = 'telegram';
+
   constructor(
     private readonly config: TelegramConfig,
     private readonly request: typeof fetch = fetch,
@@ -51,11 +66,13 @@ export interface FcmSender {
 }
 
 export class FcmTransport implements NotificationTransport {
+  readonly deliveryKey = 'fcm';
   private readonly deliveredTokensByAlert = new Map<string, Set<string>>();
 
   constructor(
     private readonly sender: FcmSender,
     private readonly getDeviceTokens: (strategyId: string) => Promise<string[]>,
+    private readonly deliveryState?: NotificationDeliveryStateStore,
   ) {}
 
   async send(alert: RiskAlert): Promise<void> {
@@ -66,7 +83,19 @@ export class FcmTransport implements NotificationTransport {
     const delivered =
       this.deliveredTokensByAlert.get(alert.idempotencyKey) ??
       new Set<string>();
-    const unsentTokens = tokens.filter((token) => !delivered.has(token));
+    const unsentTokens = await Promise.all(
+      tokens.map(async (token) => ({
+        token,
+        delivered: this.deliveryState
+          ? await this.deliveryState.hasDeliveredTarget(
+              alert.idempotencyKey,
+              `fcm:${token}`,
+            )
+          : delivered.has(token),
+      })),
+    ).then((items) =>
+      items.filter((item) => !item.delivered).map((item) => item.token),
+    );
     const results = await Promise.allSettled(
       unsentTokens.map(async (token) => {
         await this.sender.sendMessage({
@@ -79,7 +108,15 @@ export class FcmTransport implements NotificationTransport {
             kind: alert.kind,
           },
         });
-        delivered.add(token);
+        if (this.deliveryState) {
+          await this.deliveryState.markTargetDelivered(
+            alert.idempotencyKey,
+            `fcm:${token}`,
+            new Date(),
+          );
+        } else {
+          delivered.add(token);
+        }
       }),
     );
     if (results.some((result) => result.status === 'rejected')) {
@@ -93,7 +130,10 @@ export class FcmTransport implements NotificationTransport {
 export class MultiChannelDispatcher implements AlertDispatcher {
   private readonly deliveredChannelsByAlert = new Map<string, Set<number>>();
 
-  constructor(private readonly transports: NotificationTransport[]) {}
+  constructor(
+    private readonly transports: NotificationTransport[],
+    private readonly deliveryState?: NotificationDeliveryStateStore,
+  ) {}
 
   async dispatch(alert: RiskAlert): Promise<void> {
     if (this.transports.length === 0) {
@@ -102,13 +142,37 @@ export class MultiChannelDispatcher implements AlertDispatcher {
     const delivered =
       this.deliveredChannelsByAlert.get(alert.idempotencyKey) ??
       new Set<number>();
-    const unsent = this.transports
-      .map((transport, index) => ({ transport, index }))
-      .filter(({ index }) => !delivered.has(index));
+    const channelStates = await Promise.all(
+      this.transports.map(async (transport, index) => {
+        const targetKey = `channel:${transport.deliveryKey ?? index}`;
+        return {
+          transport,
+          index,
+          targetKey,
+          delivered: this.deliveryState
+            ? await this.deliveryState.hasDeliveredTarget(
+                alert.idempotencyKey,
+                targetKey,
+              )
+            : delivered.has(index),
+        };
+      }),
+    );
+    const unsent = channelStates.filter(
+      ({ delivered: wasDelivered }) => !wasDelivered,
+    );
     const results = await Promise.allSettled(
-      unsent.map(async ({ transport, index }) => {
+      unsent.map(async ({ transport, index, targetKey }) => {
         await transport.send(alert);
-        delivered.add(index);
+        if (this.deliveryState) {
+          await this.deliveryState.markTargetDelivered(
+            alert.idempotencyKey,
+            targetKey,
+            new Date(),
+          );
+        } else {
+          delivered.add(index);
+        }
       }),
     );
     if (results.some((result) => result.status === 'rejected')) {
