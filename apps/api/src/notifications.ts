@@ -70,7 +70,7 @@ export class FcmDeliveryError extends Error {
 function isUnregisteredFcmToken(error: unknown): error is FcmDeliveryError {
   return (
     error instanceof FcmDeliveryError &&
-    (error.code === 'UNREGISTERED' || error.status === 404)
+    error.code === 'UNREGISTERED'
   );
 }
 
