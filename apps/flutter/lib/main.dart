@@ -348,7 +348,8 @@ class ApiSetupScreen extends StatelessWidget {
 
 List<UserStrategy> activeStrategiesForDashboard(
   List<UserStrategy> strategies,
-) => strategies.where((strategy) => strategy.active).toList();
+) =>
+    strategies.where((strategy) => strategy.active).toList();
 
 List<Instrument> defaultWatchlistItemsToSeed(
   List<Instrument> templates,
@@ -592,8 +593,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
       final notificationRegistration = _notificationRegistration;
       if (notificationRegistration != null) {
-        unawaited(
-            notificationRegistration.syncStrategies(activeStrategies));
+        unawaited(notificationRegistration.syncStrategies(activeStrategies));
       }
     } catch (error) {
       if (!mounted) return;
