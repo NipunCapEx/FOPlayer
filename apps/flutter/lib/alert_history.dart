@@ -26,7 +26,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
   List<UserAlert> get _visibleAlerts => _alerts.where((alert) {
         return (_symbolFilter == 'All' || alert.symbol == _symbolFilter) &&
             (_kindFilter == 'All' || alert.kind == _kindFilter) &&
-            (_statusFilter == 'All' || alert.status.toLowerCase() == _statusFilter);
+            (_statusFilter == 'All' ||
+                alert.status.toLowerCase() == _statusFilter);
       }).toList();
 
   void _clearFilters() {
@@ -140,7 +141,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Filter alerts', style: Theme.of(context).textTheme.titleSmall),
+            Text('Filter alerts',
+                style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               key: const Key('alert-symbol-filter'),
