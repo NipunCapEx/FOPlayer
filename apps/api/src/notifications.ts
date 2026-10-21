@@ -56,6 +56,21 @@ export class TelegramTransport implements NotificationTransport {
   }
 }
 
+export class FcmDeliveryError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(message);
+    this.name = 'FcmDeliveryError';
+  }
+}
+
+function isUnregisteredFcmToken(error: unknown): error is FcmDeliveryError {
+  return error instanceof FcmDeliveryError && error.code === 'UNREGISTERED';
+}
+
 export interface FcmSender {
   sendMessage(input: {
     token: string;
@@ -73,6 +88,7 @@ export class FcmTransport implements NotificationTransport {
     private readonly sender: FcmSender,
     private readonly getDeviceTokens: (strategyId: string) => Promise<string[]>,
     private readonly deliveryState?: NotificationDeliveryStateStore,
+    private readonly deactivateDeviceToken?: (token: string) => Promise<void>,
   ) {}
 
   async send(alert: RiskAlert): Promise<void> {
@@ -96,32 +112,51 @@ export class FcmTransport implements NotificationTransport {
     ).then((items) =>
       items.filter((item) => !item.delivered).map((item) => item.token),
     );
+    let retiredTokens = 0;
     const results = await Promise.allSettled(
       unsentTokens.map(async (token) => {
-        await this.sender.sendMessage({
-          token,
-          title: `${alert.symbol}: ${alert.kind}`,
-          body: alert.message,
-          data: {
-            alertId: alert.idempotencyKey,
-            symbol: alert.symbol,
-            kind: alert.kind,
-          },
-        });
-        if (this.deliveryState) {
-          await this.deliveryState.markTargetDelivered(
-            alert.idempotencyKey,
-            `fcm:${token}`,
-            new Date(),
-          );
-        } else {
-          delivered.add(token);
+        try {
+          await this.sender.sendMessage({
+            token,
+            title: `${alert.symbol}: ${alert.kind}`,
+            body: alert.message,
+            data: {
+              alertId: alert.idempotencyKey,
+              symbol: alert.symbol,
+              kind: alert.kind,
+            },
+          });
+          if (this.deliveryState) {
+            await this.deliveryState.markTargetDelivered(
+              alert.idempotencyKey,
+              `fcm:${token}`,
+              new Date(),
+            );
+          } else {
+            delivered.add(token);
+          }
+          return 'delivered' as const;
+        } catch (error) {
+          if (this.deactivateDeviceToken && isUnregisteredFcmToken(error)) {
+            await this.deactivateDeviceToken(token);
+            retiredTokens += 1;
+            return 'retired' as const;
+          }
+          throw error;
         }
       }),
     );
     if (results.some((result) => result.status === 'rejected')) {
       this.deliveredTokensByAlert.set(alert.idempotencyKey, delivered);
       throw new Error('FCM delivery failed for one or more registered devices');
+    }
+    const deliveredCount = results.filter(
+      (result) => result.status === 'fulfilled' && result.value === 'delivered',
+    ).length;
+    if (retiredTokens > 0 && deliveredCount === 0) {
+      throw new Error(
+        'No deliverable FCM devices remain; unregistered tokens were deactivated',
+      );
     }
     this.deliveredTokensByAlert.delete(alert.idempotencyKey);
   }
@@ -222,7 +257,29 @@ export class FcmHttpSender implements FcmSender {
       },
     );
     if (!response.ok) {
-      throw new Error(`FCM delivery failed with HTTP ${response.status}`);
+      let code: string | undefined;
+      try {
+        const body = (await response.json()) as {
+          error?: {
+            status?: unknown;
+            details?: Array<{ errorCode?: unknown }>;
+          };
+        };
+        const detailCode = body.error?.details?.find(
+          (detail) => typeof detail.errorCode === 'string',
+        )?.errorCode;
+        if (typeof detailCode === 'string') code = detailCode;
+        else if (typeof body.error?.status === 'string') {
+          code = body.error.status;
+        }
+      } catch {
+        // Keep HTTP status as the fallback when a provider body is not JSON.
+      }
+      throw new FcmDeliveryError(
+        `FCM delivery failed with HTTP ${response.status}`,
+        response.status,
+        code,
+      );
     }
   }
 }
