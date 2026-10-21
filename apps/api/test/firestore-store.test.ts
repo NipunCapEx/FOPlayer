@@ -295,6 +295,18 @@ describe('FirestoreStrategyStore — owner isolation', () => {
         expiryDate: '2026-11-26',
       }),
     ]);
+
+    await strategies.updateForOwner('owner-a', original.id, { active: false });
+    const reactivatedWithoutDate = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1300,
+      active: true,
+    });
+    expect(reactivatedWithoutDate).toMatchObject({
+      id: original.id,
+      entryDate: '2026-10-16',
+      expiryDate: '2026-11-26',
+    });
   });
 
   it('allows reactivation only through the stable owner-symbol identity', async () => {
