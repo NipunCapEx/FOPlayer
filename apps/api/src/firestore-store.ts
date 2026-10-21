@@ -123,9 +123,7 @@ export class FirestoreStrategyStore {
       symbol: input.symbol,
       entryPrice: input.entryPrice,
       active: input.active,
-      ...(input.entryDate !== undefined
-        ? { entryDate: input.entryDate }
-        : {}),
+      ...(input.entryDate !== undefined ? { entryDate: input.entryDate } : {}),
       ...(input.expiryDate !== undefined
         ? { expiryDate: input.expiryDate }
         : {}),
