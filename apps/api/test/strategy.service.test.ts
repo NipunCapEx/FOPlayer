@@ -28,6 +28,9 @@ function createService() {
       ...(input.expiryDate !== undefined
         ? { expiryDate: input.expiryDate }
         : {}),
+      ...(input.thresholds !== undefined
+        ? { thresholds: input.thresholds }
+        : {}),
       createdAt: new Date('2026-10-20T10:00:00Z'),
       updatedAt: new Date('2026-10-20T10:00:00Z'),
     })),
@@ -74,6 +77,11 @@ describe('StrategyService', () => {
       active: true,
       entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
+      thresholds: {
+        cautionPercent: 5,
+        criticalPercent: 7,
+        breachedPercent: 9,
+      },
     });
 
     await expect(
