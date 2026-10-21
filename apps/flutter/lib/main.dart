@@ -37,6 +37,7 @@ class Instrument {
     this.entryDate,
     this.expiryDate,
     this.historicalCloses = const [],
+    this.thresholds = const StrategyThresholds(),
   });
 
   final String symbol;
@@ -51,6 +52,7 @@ class Instrument {
   final DateTime? entryDate;
   final DateTime? expiryDate;
   final List<double> historicalCloses;
+  final StrategyThresholds thresholds;
 
   bool get isExpired {
     final expiry = expiryDate;
@@ -75,17 +77,23 @@ class Instrument {
         exchangeAge < -maxFutureSkew;
   }
 
-  double get lowerBoundary => entryPrice * 0.88;
-  double get upperBoundary => entryPrice * 1.12;
+  double get lowerBoundary => entryPrice * (1 - thresholds.breachedPercent / 100);
+  double get upperBoundary => entryPrice * (1 + thresholds.breachedPercent / 100);
   double get movementPercent => (spotPrice - entryPrice) / entryPrice * 100;
 
   RiskLevel get riskLevel {
     if (isStale || isExpired) return RiskLevel.normal;
     // Use the entry-relative percentage for threshold comparisons to avoid
     // floating-point boundary rounding at exactly ±12%.
-    if (movementPercent.abs() >= 12) return RiskLevel.breached;
-    if (movementPercent.abs() >= 10) return RiskLevel.critical;
-    if (movementPercent.abs() >= 8) return RiskLevel.caution;
+    if (movementPercent.abs() >= thresholds.breachedPercent) {
+      return RiskLevel.breached;
+    }
+    if (movementPercent.abs() >= thresholds.criticalPercent) {
+      return RiskLevel.critical;
+    }
+    if (movementPercent.abs() >= thresholds.cautionPercent) {
+      return RiskLevel.caution;
+    }
     return RiskLevel.normal;
   }
 
@@ -100,6 +108,7 @@ class Instrument {
     DateTime? entryDate,
     DateTime? expiryDate,
     List<double>? historicalCloses,
+    StrategyThresholds? thresholds,
   }) =>
       Instrument(
         symbol: symbol,
@@ -114,6 +123,7 @@ class Instrument {
         entryDate: entryDate ?? this.entryDate,
         expiryDate: expiryDate ?? this.expiryDate,
         historicalCloses: historicalCloses ?? this.historicalCloses,
+        thresholds: thresholds ?? this.thresholds,
       );
 }
 
@@ -522,6 +532,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               entryPrice: result.entryPrice,
               entryDate: result.entryDate,
               expiryDate: result.expiryDate,
+              thresholds: result.thresholds,
             );
       if (!mounted) return;
       setState(() {
@@ -563,6 +574,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
         content: Text('${instrument.symbol} removed from this dashboard.'),
       ),
     );
+  }
+
+  Future<void> _editThresholds(Instrument instrument) async {
+    final thresholds = await showDialog<StrategyThresholds>(
+      context: context,
+      builder: (dialogContext) => ThresholdsDialog(instrument: instrument),
+    );
+    if (thresholds == null || !mounted) return;
+    try {
+      final id = _strategyIds[instrument.symbol];
+      if (widget.apiClient != null && id != null) {
+        await widget.apiClient!.updateStrategy(id, thresholds: thresholds);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save risk thresholds: $error')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      instruments = [
+        for (final item in instruments)
+          if (item.symbol == instrument.symbol)
+            item.copyWith(thresholds: thresholds)
+          else
+            item,
+      ];
+    });
   }
 
   Future<void> _editEntryDate(Instrument instrument) async {
@@ -886,6 +928,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onEditEntry: () => _editEntry(instrument),
                               onEditEntryDate: () => _editEntryDate(instrument),
                               onEditExpiry: () => _editExpiry(instrument),
+                              onEditThresholds: () => _editThresholds(instrument),
                               onRemove: () => _removeInstrument(instrument),
                               isDemo: widget.apiClient == null,
                             ),
@@ -1070,6 +1113,110 @@ class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
           key: const Key('save-new-symbol-button'),
           onPressed: _save,
           child: const Text('Add symbol'),
+        ),
+      ],
+    );
+  }
+}
+
+class ThresholdsDialog extends StatefulWidget {
+  const ThresholdsDialog({required this.instrument, super.key});
+
+  final Instrument instrument;
+
+  @override
+  State<ThresholdsDialog> createState() => _ThresholdsDialogState();
+}
+
+class _ThresholdsDialogState extends State<ThresholdsDialog> {
+  late final TextEditingController cautionController;
+  late final TextEditingController criticalController;
+  late final TextEditingController breachedController;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    cautionController = TextEditingController(
+      text: widget.instrument.thresholds.cautionPercent.toString(),
+    );
+    criticalController = TextEditingController(
+      text: widget.instrument.thresholds.criticalPercent.toString(),
+    );
+    breachedController = TextEditingController(
+      text: widget.instrument.thresholds.breachedPercent.toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    cautionController.dispose();
+    criticalController.dispose();
+    breachedController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final caution = double.tryParse(cautionController.text.trim());
+    final critical = double.tryParse(criticalController.text.trim());
+    final breached = double.tryParse(breachedController.text.trim());
+    final thresholds = caution == null || critical == null || breached == null
+        ? null
+        : StrategyThresholds(
+            cautionPercent: caution,
+            criticalPercent: critical,
+            breachedPercent: breached,
+          );
+    if (thresholds == null || !thresholds.isValid) {
+      setState(() {
+        error = 'Use positive thresholds in increasing order, below 100%.';
+      });
+      return;
+    }
+    Navigator.pop(context, thresholds);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Risk thresholds · ${widget.instrument.symbol}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            key: const Key('caution-threshold-input'),
+            controller: cautionController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Caution (%)'),
+          ),
+          TextField(
+            key: const Key('critical-threshold-input'),
+            controller: criticalController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Critical (%)'),
+          ),
+          TextField(
+            key: const Key('breached-threshold-input'),
+            controller: breachedController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Breach (%)'),
+          ),
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(error!, style: const TextStyle(color: Colors.red)),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('save-thresholds-button'),
+          onPressed: _save,
+          child: const Text('Save thresholds'),
         ),
       ],
     );
@@ -1310,6 +1457,7 @@ class InstrumentCard extends StatelessWidget {
     this.onRemove,
     this.onEditEntryDate,
     this.onEditExpiry,
+    this.onEditThresholds,
     this.isDemo = true,
     super.key,
   });
@@ -1319,6 +1467,7 @@ class InstrumentCard extends StatelessWidget {
   final VoidCallback? onRemove;
   final VoidCallback? onEditEntryDate;
   final VoidCallback? onEditExpiry;
+  final VoidCallback? onEditThresholds;
   final bool isDemo;
 
   @override
@@ -1430,6 +1579,15 @@ class InstrumentCard extends StatelessWidget {
             ),
             const Divider(height: 28),
             _PriceRow(label: 'Entry', value: instrument.entryPrice),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  const Expanded(child: Text('Risk thresholds')),
+                  Text('${instrument.thresholds.cautionPercent}% / ${instrument.thresholds.criticalPercent}% / ${instrument.thresholds.breachedPercent}%'),
+                ],
+              ),
+            ),
             if (instrument.historicalCloses.length >= 2)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1501,6 +1659,12 @@ class InstrumentCard extends StatelessWidget {
                     onPressed: onEditEntryDate,
                     icon: const Icon(Icons.event_available, size: 18),
                     label: const Text('Edit entry date'),
+                  ),
+                if (onEditThresholds != null)
+                  TextButton.icon(
+                    onPressed: onEditThresholds,
+                    icon: const Icon(Icons.tune, size: 18),
+                    label: const Text('Risk thresholds'),
                   ),
                 if (onEditExpiry != null)
                   TextButton.icon(
