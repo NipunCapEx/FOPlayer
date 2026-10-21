@@ -3,7 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { SUPPORTED_SYMBOLS, type SupportedSymbol } from './risk-engine.js';
+import {
+  DEFAULT_RISK_THRESHOLDS,
+  SUPPORTED_SYMBOLS,
+  type RiskThresholds,
+  type SupportedSymbol,
+} from './risk-engine.js';
 import {
   FirestoreStrategyStore,
   type StrategyRecord,
@@ -14,6 +19,7 @@ export interface CreateStrategyCommand {
   entryPrice: unknown;
   entryDate?: unknown;
   expiryDate?: unknown;
+  thresholds?: unknown;
 }
 
 export interface UpdateStrategyCommand {
@@ -21,6 +27,7 @@ export interface UpdateStrategyCommand {
   active?: unknown;
   entryDate?: unknown;
   expiryDate?: unknown;
+  thresholds?: unknown;
 }
 
 @Injectable()
@@ -66,6 +73,13 @@ export class StrategyService {
       );
     }
 
+    if (
+      command.thresholds !== undefined &&
+      !isValidThresholds(command.thresholds)
+    ) {
+      throw new BadRequestException('thresholds are invalid');
+    }
+
     return this.store.createForOwner(ownerUid, {
       symbol: command.symbol as SupportedSymbol,
       entryPrice: command.entryPrice,
@@ -76,6 +90,9 @@ export class StrategyService {
       ...(typeof command.expiryDate === 'string'
         ? { expiryDate: command.expiryDate }
         : {}),
+      ...(command.thresholds === undefined
+        ? {}
+        : { thresholds: command.thresholds as RiskThresholds }),
     });
   }
 
@@ -89,6 +106,7 @@ export class StrategyService {
       active?: boolean;
       expiryDate?: string;
       entryDate?: string;
+      thresholds?: RiskThresholds;
     } = {};
     if (command.entryPrice !== undefined) {
       if (!isPositiveFinite(command.entryPrice)) {
@@ -111,6 +129,12 @@ export class StrategyService {
         );
       }
       patch.entryDate = command.entryDate;
+    }
+    if (command.thresholds !== undefined) {
+      if (!isValidThresholds(command.thresholds)) {
+        throw new BadRequestException('thresholds are invalid');
+      }
+      patch.thresholds = command.thresholds;
     }
     if (command.expiryDate !== undefined) {
       if (!isValidIsoDate(command.expiryDate)) {
@@ -156,6 +180,19 @@ export class StrategyService {
   async alerts(ownerUid: string): Promise<Record<string, unknown>[]> {
     return this.store.listAlertsForOwner(ownerUid);
   }
+}
+
+function isValidThresholds(value: unknown): value is RiskThresholds {
+  if (!value || typeof value !== 'object') return false;
+  const thresholds = value as Partial<RiskThresholds>;
+  return (
+    isPositiveFinite(thresholds.cautionPercent) &&
+    isPositiveFinite(thresholds.criticalPercent) &&
+    isPositiveFinite(thresholds.breachedPercent) &&
+    thresholds.cautionPercent < thresholds.criticalPercent &&
+    thresholds.criticalPercent < thresholds.breachedPercent &&
+    thresholds.breachedPercent < 100
+  );
 }
 
 function isValidIsoDate(value: unknown): value is string {
