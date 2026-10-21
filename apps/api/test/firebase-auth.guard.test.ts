@@ -81,10 +81,12 @@ describe('FirebaseAuthGuard', () => {
     const request: AuthenticatedRequest = {
       headers: { authorization: 'Bearer revoked-token' },
     };
-    const verifyIdToken = vi.fn(async (_token: string, checkRevoked?: boolean) => {
-      expect(checkRevoked).toBe(true);
-      throw new Error('auth/id-token-revoked');
-    });
+    const verifyIdToken = vi.fn(
+      async (_token: string, checkRevoked?: boolean) => {
+        expect(checkRevoked).toBe(true);
+        throw new Error('auth/id-token-revoked');
+      },
+    );
     const guard = new FirebaseAuthGuard({
       auth: { verifyIdToken },
     } as unknown as FirebaseAdminService);
