@@ -319,7 +319,13 @@ export class FirestoreStrategyStore {
     const data = strategy.data();
     if (!strategy.exists || data?.ownerUid !== ownerUid) return false;
 
-    const id = createHash('sha256').update(token).digest('hex');
+    const id = createHash('sha256')
+      .update(ownerUid)
+      .update('\\0')
+      .update(strategyId)
+      .update('\\0')
+      .update(token)
+      .digest('hex');
     await this.db.collection('deviceTokens').doc(id).set({
       ownerUid,
       strategyId,
@@ -331,15 +337,20 @@ export class FirestoreStrategyStore {
   }
 
   async deactivateDeviceToken(token: string): Promise<void> {
-    const id = createHash('sha256').update(token).digest('hex');
-    const reference = this.db.collection('deviceTokens').doc(id);
-    const snapshot = await reference.get();
-    if (!snapshot.exists) return;
-    await reference.update({
-      active: false,
-      deactivatedReason: 'fcm-unregistered',
-      updatedAt: new Date(),
-    });
+    const matchingTokens = await this.db
+      .collection('deviceTokens')
+      .where('token', '==', token)
+      .get();
+    const updatedAt = new Date();
+    for (const document of matchingTokens.docs) {
+      const data = document.data();
+      if (data?.token !== token || data.active !== true) continue;
+      await this.db.collection('deviceTokens').doc(document.id).update({
+        active: false,
+        deactivatedReason: 'fcm-unregistered',
+        updatedAt,
+      });
+    }
   }
 
   async listDeviceTokensForStrategy(strategyId: string): Promise<string[]> {
