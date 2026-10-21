@@ -261,15 +261,20 @@ void main() {
                 entryPrice: 1000,
                 spotPrice: 1000,
                 lastUpdated: DateTime(2026, 10, 20),
+                entryDate: DateTime(2026, 10, 15),
                 expiryDate: DateTime(2026, 11, 26),
               ),
               onEditEntry: _noop,
+              onEditEntryDate: _noop,
               onEditExpiry: _noop,
             ),
           ),
         ),
       );
 
+      expect(find.text('Entry date'), findsOneWidget);
+      expect(find.text('2026-10-15'), findsOneWidget);
+      expect(find.text('Edit entry date'), findsOneWidget);
       expect(find.text('Expiry date'), findsOneWidget);
       expect(find.text('2026-11-26'), findsOneWidget);
       expect(find.text('Edit expiry'), findsOneWidget);
