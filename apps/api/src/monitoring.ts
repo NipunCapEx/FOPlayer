@@ -2,6 +2,7 @@ import {
   assessRisk,
   type RiskAssessment,
   type SupportedSymbol,
+  type RiskThresholds,
 } from './risk-engine.js';
 import type { MarketDataProvider, MarketSnapshot } from './market-data.js';
 import { validateSnapshot, DEFAULT_FRESHNESS_POLICY } from './market-data.js';
@@ -13,6 +14,7 @@ export interface Strategy {
   active: boolean;
   ownerUid?: string;
   expiryDate?: string;
+  thresholds?: RiskThresholds;
 }
 
 export type AlertKind =
@@ -146,6 +148,7 @@ export class RiskMonitor {
             symbol,
             entryPrice: strategy.entryPrice,
             spotPrice: snapshot.price,
+            thresholds: strategy.thresholds,
           });
         } catch {
           await this.repository.recordUnavailable(
