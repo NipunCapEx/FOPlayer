@@ -150,6 +150,28 @@ export class FirestoreStrategyStore {
     const current = toStrategyRecord(snapshot);
     if (!current || current.ownerUid !== ownerUid) return null;
 
+    if (input.active === true) {
+      if (
+        !current.active &&
+        strategyId !== strategyDocumentId(ownerUid, current.symbol)
+      ) {
+        throw new ConflictException(
+          'reactivate this symbol through the watchlist create flow',
+        );
+      }
+      const conflictingStrategy = (await this.listForOwner(ownerUid)).find(
+        (strategy) =>
+          strategy.id !== strategyId &&
+          strategy.active &&
+          strategy.symbol === current.symbol,
+      );
+      if (conflictingStrategy) {
+        throw new ConflictException(
+          'an active strategy already exists for this symbol',
+        );
+      }
+    }
+
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (input.entryPrice !== undefined) patch.entryPrice = input.entryPrice;
     if (input.active !== undefined) patch.active = input.active;

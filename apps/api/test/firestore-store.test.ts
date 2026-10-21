@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { ConflictException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import { assessRisk } from '../src/risk-engine.js';
 import {
@@ -280,6 +281,90 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       ownerUid: 'owner-a',
     });
     expect(await strategies.listForOwner('owner-a')).toHaveLength(1);
+  });
+
+  it('allows reactivation only through the stable owner-symbol identity', async () => {
+    const { db, strategies } = createStores();
+    const stable = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    await strategies.updateForOwner('owner-a', stable.id, { active: false });
+    await expect(
+      strategies.updateForOwner('owner-a', stable.id, { active: true }),
+    ).resolves.toMatchObject({ id: stable.id, active: true });
+
+    await db
+      .collection('strategies')
+      .doc('legacy-strategy')
+      .set({
+        id: 'legacy-strategy',
+        ownerUid: 'owner-a',
+        symbol: 'JSWSTEEL',
+        entryPrice: 900,
+        active: false,
+        createdAt: new Date('2026-10-01T00:00:00Z'),
+        updatedAt: new Date('2026-10-01T00:00:00Z'),
+      });
+    await expect(
+      strategies.updateForOwner('owner-a', 'legacy-strategy', {
+        active: true,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects reactivation when another active record already owns the symbol', async () => {
+    const { db, strategies } = createStores();
+    const stable = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    await strategies.updateForOwner('owner-a', stable.id, { active: false });
+    await db
+      .collection('strategies')
+      .doc('legacy-active')
+      .set({
+        ownerUid: 'owner-a',
+        symbol: 'RELIANCE',
+        entryPrice: 1100,
+        active: true,
+        createdAt: new Date('2026-10-01T00:00:00Z'),
+        updatedAt: new Date('2026-10-01T00:00:00Z'),
+      });
+
+    await expect(
+      strategies.updateForOwner('owner-a', stable.id, { active: true }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects a conflicting record at the deterministic owner-symbol identity', async () => {
+    const { db, strategies } = createStores();
+    const id = createHash('sha256')
+      .update('owner-a')
+      .update('\0')
+      .update('RELIANCE')
+      .digest('hex');
+    await db
+      .collection('strategies')
+      .doc(id)
+      .set({
+        ownerUid: 'owner-a',
+        symbol: 'JSWSTEEL',
+        entryPrice: 900,
+        active: false,
+        createdAt: new Date('2026-10-01T00:00:00Z'),
+        updatedAt: new Date('2026-10-01T00:00:00Z'),
+      });
+
+    await expect(
+      strategies.createForOwner('owner-a', {
+        symbol: 'RELIANCE',
+        entryPrice: 1000,
+        active: true,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('filters malformed strategy documents', async () => {
