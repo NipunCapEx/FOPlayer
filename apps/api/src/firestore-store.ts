@@ -114,7 +114,9 @@ export class FirestoreStrategyStore {
         ...current,
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
+        ...(input.thresholds !== undefined
+          ? { thresholds: input.thresholds }
+          : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -132,7 +134,9 @@ export class FirestoreStrategyStore {
       symbol: input.symbol,
       entryPrice: input.entryPrice,
       active: input.active,
-      ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
+      ...(input.thresholds !== undefined
+        ? { thresholds: input.thresholds }
+        : {}),
       ...(input.entryDate !== undefined ? { entryDate: input.entryDate } : {}),
       ...(input.expiryDate !== undefined
         ? { expiryDate: input.expiryDate }
@@ -161,7 +165,9 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
+        ...(input.thresholds !== undefined
+          ? { thresholds: input.thresholds }
+          : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -174,7 +180,9 @@ export class FirestoreStrategyStore {
         ...raced,
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
+        ...(input.thresholds !== undefined
+          ? { thresholds: input.thresholds }
+          : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
