@@ -7,7 +7,7 @@ import 'package:foplayer/strategy_api.dart';
 void main() {
   test('maps a saved notification preference into the dashboard instrument',
       () {
-    final strategy = UserStrategy(
+    const strategy = UserStrategy(
       id: 'strategy-1',
       symbol: 'RELIANCE',
       entryPrice: 1000,
