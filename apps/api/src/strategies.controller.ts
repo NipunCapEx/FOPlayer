@@ -39,7 +39,9 @@ export class StrategiesController {
     return this.strategies.create(requireUid(request), {
       symbol: body.symbol,
       entryPrice: body.entryPrice,
-      ...(Object.hasOwn(body, 'expiryDate') ? { expiryDate: body.expiryDate } : {}),
+      ...(Object.hasOwn(body, 'expiryDate')
+        ? { expiryDate: body.expiryDate }
+        : {}),
     });
   }
 
