@@ -1556,9 +1556,8 @@ class _PriceHistoryChartState extends State<PriceHistoryChart> {
               behavior: HitTestBehavior.opaque,
               onTapDown: (details) {
                 if (values.length < 2 || constraints.maxWidth <= 0) return;
-                final ratio =
-                    (details.localPosition.dx / constraints.maxWidth)
-                        .clamp(0.0, 1.0);
+                final ratio = (details.localPosition.dx / constraints.maxWidth)
+                    .clamp(0.0, 1.0);
                 setState(() {
                   selectedIndex = (ratio * (values.length - 1)).round();
                 });
@@ -1584,7 +1583,8 @@ class _PriceHistoryChartState extends State<PriceHistoryChart> {
 }
 
 class _PriceHistoryPainter extends CustomPainter {
-  const _PriceHistoryPainter({required this.values, required this.selectedIndex});
+  const _PriceHistoryPainter(
+      {required this.values, required this.selectedIndex});
 
   final List<double> values;
   final int? selectedIndex;
