@@ -767,5 +767,4 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
       await restartedRepository.hasDeliveredTarget(key, 'channel:fcm'),
     ).toBe(false);
   });
-
 });
