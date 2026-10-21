@@ -339,6 +339,29 @@ class ApiSetupScreen extends StatelessWidget {
   }
 }
 
+List<Instrument> defaultWatchlistItemsToSeed(
+  List<Instrument> templates,
+  List<UserStrategy> existingStrategies,
+) {
+  final templateSymbols = templates.map((item) => item.symbol).toSet();
+  final existingSymbols =
+      existingStrategies.map((strategy) => strategy.symbol).toSet();
+  final hasExistingDefault = existingStrategies.any(
+    (strategy) => templateSymbols.contains(strategy.symbol),
+  );
+
+  // A profile that already has only custom strategies is not a new user.
+  // Inactive default records also count, so intentionally removed defaults
+  // are not re-created on later dashboard loads.
+  if (existingStrategies.isNotEmpty && !hasExistingDefault) {
+    return const [];
+  }
+
+  return templates
+      .where((template) => !existingSymbols.contains(template.symbol))
+      .toList();
+}
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, this.onSignOut, this.apiClient});
 
@@ -444,8 +467,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     try {
       var dashboard = await apiClient.getDashboard();
-      if (!dashboard.hasAnyStrategies) {
-        for (final item in List<Instrument>.of(_defaultWatchlistTemplates)) {
+      final existingStrategies = await apiClient.listStrategies();
+      final missingDefaults = defaultWatchlistItemsToSeed(
+        _defaultWatchlistTemplates,
+        existingStrategies,
+      );
+      for (final item in missingDefaults) {
+        try {
           await apiClient.createStrategy(
             symbol: item.symbol,
             entryPrice: item.entryPrice,
@@ -453,7 +481,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             expiryDate: item.expiryDate,
             thresholds: item.thresholds,
           );
+        } catch (_) {
+          // A concurrent client or a timed-out response may have saved the
+          // strategy already. Only suppress the error when the server confirms
+          // that this symbol now exists; otherwise keep the retryable error.
+          final latestStrategies = await apiClient.listStrategies();
+          if (!latestStrategies.any((strategy) => strategy.symbol == item.symbol)) {
+            rethrow;
+          }
         }
+      }
+      if (missingDefaults.isNotEmpty) {
         dashboard = await apiClient.getDashboard();
       }
       if (!mounted) return;
