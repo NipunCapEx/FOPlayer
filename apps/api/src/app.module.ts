@@ -19,8 +19,6 @@ import {
   RiskMonitor,
   isIndianEquityMarketOpen,
   type AlertDispatcher,
-  type MarketHoursPolicy,
-  type MarketSession,
 } from './monitoring.js';
 import { MonitoringRunner } from './monitoring.runner.js';
 import { StrategiesController } from './strategies.controller.js';
@@ -94,58 +92,15 @@ export const ALERT_DISPATCHER = Symbol('ALERT_DISPATCHER');
     },
     {
       provide: PollingWorker,
-      useFactory: (monitor: RiskMonitor) => {
-        const holidays = (process.env.FOPLAYER_MARKET_HOLIDAYS ?? '')
-          .split(',')
-          .map((date) => date.trim())
-          .filter(Boolean);
-        const specialSessions = readSpecialSessions(
-          process.env.FOPLAYER_MARKET_SPECIAL_SESSIONS,
-        );
-        const policy: MarketHoursPolicy = {
-          openingTime: process.env.FOPLAYER_MARKET_OPEN ?? '09:15',
-          closingTime: process.env.FOPLAYER_MARKET_CLOSE ?? '15:30',
-          holidays,
-          specialSessions,
-        };
-        return new PollingWorker(monitor, {
-          isMonitoringWindow: (now) => isIndianEquityMarketOpen(now, policy),
-        });
-      },
+      useFactory: (monitor: RiskMonitor) =>
+        new PollingWorker(monitor, {
+          // Resolve and validate all market-hours environment settings per tick.
+          // Invalid configuration fails closed rather than enabling polling.
+          isMonitoringWindow: (now) => isIndianEquityMarketOpen(now),
+        }),
       inject: [RiskMonitor],
     },
     MonitoringRunner,
   ],
 })
 export class AppModule {}
-
-export function readSpecialSessions(
-  raw: string | undefined,
-): Record<string, MarketSession> {
-  if (!raw?.trim()) return {};
-  const parsed: unknown = JSON.parse(raw);
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error('FOPLAYER_MARKET_SPECIAL_SESSIONS must be a JSON object.');
-  }
-  const sessions: Record<string, MarketSession> = {};
-  for (const [date, value] of Object.entries(parsed)) {
-    if (
-      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-      typeof value !== 'object' ||
-      value === null ||
-      Array.isArray(value)
-    ) {
-      throw new Error(
-        'Each special market session must use an ISO date and open/close times.',
-      );
-    }
-    const session = value as Record<string, unknown>;
-    if (typeof session.open !== 'string' || typeof session.close !== 'string') {
-      throw new Error(
-        'Each special market session must include string open and close times.',
-      );
-    }
-    sessions[date] = { open: session.open, close: session.close };
-  }
-  return sessions;
-}

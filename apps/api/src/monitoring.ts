@@ -404,7 +404,21 @@ export function isIndianEquityMarketOpen(
   return localMinutes >= openingMinutes && localMinutes <= closingMinutes;
 }
 
-function marketHoursPolicyFromEnvironment(): MarketHoursPolicy | null {
+export function marketHoursPolicyFromEnvironment(): MarketHoursPolicy | null {
+  const configuredOpening = process.env.FOPLAYER_MARKET_OPEN?.trim();
+  const configuredClosing = process.env.FOPLAYER_MARKET_CLOSE?.trim();
+  const openingTime = configuredOpening || undefined;
+  const closingTime = configuredClosing || undefined;
+  const openingMinutes = parseMarketClock(openingTime ?? '09:15');
+  const closingMinutes = parseMarketClock(closingTime ?? '15:30');
+  if (
+    openingMinutes === null ||
+    closingMinutes === null ||
+    openingMinutes > closingMinutes
+  ) {
+    return null;
+  }
+
   const configuredHolidays = process.env.FOPLAYER_MARKET_HOLIDAYS?.trim();
   const holidays = configuredHolidays
     ? configuredHolidays.split(',').map((date) => date.trim())
@@ -446,6 +460,8 @@ function marketHoursPolicyFromEnvironment(): MarketHoursPolicy | null {
   }
 
   return {
+    ...(openingTime ? { openingTime } : {}),
+    ...(closingTime ? { closingTime } : {}),
     ...(holidays.length > 0 ? { holidays } : {}),
     ...(specialSessions ? { specialSessions } : {}),
   };

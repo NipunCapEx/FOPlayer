@@ -1,6 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import { AppModule, readSpecialSessions } from '../src/app.module.js';
+import { AppModule } from '../src/app.module.js';
+import {
+  isIndianEquityMarketOpen,
+  marketHoursPolicyFromEnvironment,
+} from '../src/monitoring.js';
 import { FirebaseAdminService } from '../src/firebase-admin.service.js';
 import { HealthController } from '../src/health.controller.js';
 
@@ -12,6 +16,10 @@ const keys = [
   'K_SERVICE',
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_CHAT_ID',
+  'FOPLAYER_MARKET_OPEN',
+  'FOPLAYER_MARKET_CLOSE',
+  'FOPLAYER_MARKET_HOLIDAYS',
+  'FOPLAYER_MARKET_SPECIAL_SESSIONS',
 ] as const;
 const original = new Map(keys.map((key) => [key, process.env[key]]));
 
@@ -71,40 +79,53 @@ describe('AppModule runtime wiring', () => {
   });
 });
 
-describe('special market session configuration', () => {
-  it('returns no overrides when the setting is empty', () => {
-    expect(readSpecialSessions(undefined)).toEqual({});
-    expect(readSpecialSessions('  ')).toEqual({});
-  });
+describe('runtime market-hours environment configuration', () => {
+  it('loads valid holiday, opening/closing and special-session settings for the worker', () => {
+    process.env.FOPLAYER_MARKET_OPEN = '09:00';
+    process.env.FOPLAYER_MARKET_CLOSE = '15:00';
+    process.env.FOPLAYER_MARKET_HOLIDAYS = '2026-11-09,2026-11-10';
+    process.env.FOPLAYER_MARKET_SPECIAL_SESSIONS =
+      '{"2026-11-08":{"open":"18:00","close":"19:00"}}';
 
-  it('parses date-specific open and close times', () => {
-    expect(
-      readSpecialSessions('{"2026-11-08":{"open":"18:00","close":"19:00"}}'),
-    ).toEqual({
-      '2026-11-08': { open: '18:00', close: '19:00' },
+    expect(marketHoursPolicyFromEnvironment()).toEqual({
+      openingTime: '09:00',
+      closingTime: '15:00',
+      holidays: ['2026-11-09', '2026-11-10'],
+      specialSessions: {
+        '2026-11-08': { open: '18:00', close: '19:00' },
+      },
     });
-  });
-
-  it('rejects malformed JSON and non-object values', () => {
-    expect(() => readSpecialSessions('{')).toThrow();
-    expect(() => readSpecialSessions('[]')).toThrow(
-      'FOPLAYER_MARKET_SPECIAL_SESSIONS must be a JSON object.',
+    expect(isIndianEquityMarketOpen(new Date('2026-11-08T12:30:00.000Z'))).toBe(
+      true,
+    );
+    expect(isIndianEquityMarketOpen(new Date('2026-11-09T04:00:00.000Z'))).toBe(
+      false,
     );
   });
 
-  it('rejects invalid date keys and invalid session values', () => {
-    expect(() =>
-      readSpecialSessions('{"not-a-date":{"open":"09:00","close":"10:00"}}'),
-    ).toThrow(
-      'Each special market session must use an ISO date and open/close times.',
-    );
-    expect(() => readSpecialSessions('{"2026-11-08":null}')).toThrow(
-      'Each special market session must use an ISO date and open/close times.',
-    );
-    expect(() =>
-      readSpecialSessions('{"2026-11-08":{"open":9,"close":"10:00"}}'),
-    ).toThrow(
-      'Each special market session must include string open and close times.',
-    );
+  it('fails closed for invalid holiday, clock, or special-session configuration', () => {
+    for (const [key, value] of [
+      ['FOPLAYER_MARKET_HOLIDAYS', '2026-02-30'],
+      ['FOPLAYER_MARKET_OPEN', '25:00'],
+      ['FOPLAYER_MARKET_CLOSE', '08:00'],
+      [
+        'FOPLAYER_MARKET_SPECIAL_SESSIONS',
+        '{"2026-02-30":{"open":"18:00","close":"19:00"}}',
+      ],
+      [
+        'FOPLAYER_MARKET_SPECIAL_SESSIONS',
+        '{"2026-11-08":{"open":"19:00","close":"18:00"}}',
+      ],
+    ] as const) {
+      process.env.FOPLAYER_MARKET_OPEN = '';
+      process.env.FOPLAYER_MARKET_CLOSE = '';
+      process.env.FOPLAYER_MARKET_HOLIDAYS = '';
+      process.env.FOPLAYER_MARKET_SPECIAL_SESSIONS = '';
+      process.env[key] = value;
+      expect(marketHoursPolicyFromEnvironment()).toBeNull();
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-11-08T12:30:00.000Z')),
+      ).toBe(false);
+    }
   });
 });
