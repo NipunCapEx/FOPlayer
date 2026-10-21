@@ -321,6 +321,20 @@ export class FirestoreStrategyStore {
 
     const collection = this.db.collection('deviceTokens');
     const matchingTokens = await collection.where('token', '==', token).get();
+    for (const document of matchingTokens.docs) {
+      const record = document.data();
+      if (
+        record?.token === token &&
+        record.ownerUid !== ownerUid &&
+        record.active === true
+      ) {
+        await collection.doc(document.id).update({
+          active: false,
+          deactivatedReason: 'device-owner-changed',
+          updatedAt: new Date(),
+        });
+      }
+    }
     const matchingStrategyTokens = matchingTokens.docs.filter((document) => {
       const record = document.data();
       return record?.ownerUid === ownerUid && record?.strategyId === strategyId;
