@@ -154,7 +154,7 @@ jobs:
         run: flutter build apk --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}" --dart-define=FOPLAYER_API_BASE_URL="${{ vars.FOPLAYER_API_BASE_URL }}"
 
       - name: Build signed Android App Bundle for Google Play
-        run: flutter build appbundle --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}"
+        run: flutter build appbundle --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}" --dart-define=FOPLAYER_API_BASE_URL="${{ vars.FOPLAYER_API_BASE_URL }}"
 
       - name: Verify release artifacts
         run: |
