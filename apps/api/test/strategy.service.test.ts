@@ -95,6 +95,30 @@ describe('StrategyService', () => {
         },
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    const invalidThresholds = [
+      null,
+      {},
+      { cautionPercent: 0, criticalPercent: 7, breachedPercent: 9 },
+      { cautionPercent: 5, criticalPercent: 7, breachedPercent: 100 },
+      { cautionPercent: 10, criticalPercent: 8, breachedPercent: 12 },
+      { cautionPercent: 5, criticalPercent: 8, breachedPercent: 7 },
+      { cautionPercent: '5', criticalPercent: 7, breachedPercent: 9 },
+    ];
+    for (const thresholds of invalidThresholds) {
+      await expect(
+        service.create('owner-1', {
+          symbol: 'RELIANCE',
+          entryPrice: 100,
+          thresholds,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    }
+    await expect(
+      service.update('owner-1', 'strategy-1', {
+        thresholds: { cautionPercent: 10, criticalPercent: 8, breachedPercent: 12 },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
     await expect(
       service.create('owner-1', {
         symbol: 'RELIANCE',
