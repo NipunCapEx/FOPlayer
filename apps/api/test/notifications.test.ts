@@ -153,6 +153,29 @@ describe('FcmHttpSender', () => {
     });
   });
 
+  it('falls back to the FCM error status when details omit an error code', async () => {
+    const sender = new FcmHttpSender(
+      'test-project',
+      { getAccessToken: async () => 'server-access-token' },
+      vi.fn(
+        async (_input: RequestInfo | URL, _init?: RequestInit) =>
+          new Response(
+            JSON.stringify({ error: { status: 'INVALID_ARGUMENT' } }),
+            { status: 400 },
+          ),
+      ) as typeof fetch,
+    );
+
+    await expect(
+      sender.sendMessage({
+        token: 'device-token',
+        title: 'title',
+        body: 'body',
+        data: {},
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT', status: 400 });
+  });
+
   it('surfaces FCM HTTP errors for outbox retry', async () => {
     const sender = new FcmHttpSender(
       'test-project',
@@ -312,6 +335,28 @@ describe('FcmTransport', () => {
     expect(deactivateDeviceToken).toHaveBeenCalledOnce();
     expect(deactivateDeviceToken).toHaveBeenCalledWith('stale-device');
     expect(sendMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails clearly when every registered FCM token is unregistered', async () => {
+    const sendMessage = vi.fn(async () => {
+      throw new FcmDeliveryError(
+        'FCM delivery failed with HTTP 404',
+        404,
+        'UNREGISTERED',
+      );
+    });
+    const deactivateDeviceToken = vi.fn(async (_token: string) => {});
+    const transport = new FcmTransport(
+      { sendMessage },
+      async () => ['stale-device'],
+      undefined,
+      deactivateDeviceToken,
+    );
+
+    await expect(transport.send(alert)).rejects.toThrow(
+      'No deliverable FCM devices remain; unregistered tokens were deactivated',
+    );
+    expect(deactivateDeviceToken).toHaveBeenCalledWith('stale-device');
   });
 
   it('keeps transient FCM failures retryable after retiring invalid tokens', async () => {
