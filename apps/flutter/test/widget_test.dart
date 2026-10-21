@@ -221,6 +221,34 @@ void main() {
       expect(find.byKey(const Key('save-new-symbol-button')), findsOneWidget);
     });
 
+    testWidgets('marks expired strategies and suppresses movement display',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: InstrumentCard(
+              instrument: Instrument(
+                symbol: 'RELIANCE',
+                name: 'Reliance Industries',
+                entryPrice: 1000,
+                spotPrice: 1120,
+                lastUpdated: DateTime(2026, 10, 20),
+                expiryDate: DateTime(2026, 10, 19),
+              ),
+              onEditEntry: _noop,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('EXPIRED'), findsOneWidget);
+      expect(
+        find.text('Strategy expired. No actionable risk state is shown.'),
+        findsOneWidget,
+      );
+      expect(find.text('Movement unavailable'), findsOneWidget);
+    });
+
     testWidgets('shows expiry configuration on the instrument card',
         (tester) async {
       await tester.pumpWidget(
