@@ -96,6 +96,24 @@ describe('StrategiesController', () => {
       expiryDate: '2026-11-26',
     });
 
+    await controller.createStrategy(request, {
+      symbol: 'SBICARD',
+      entryPrice: 800,
+    });
+    expect(service.create).toHaveBeenLastCalledWith('verified-user', {
+      symbol: 'SBICARD',
+      entryPrice: 800,
+    });
+
+    await controller.updateStrategy(request, 'strategy-2', {
+      entryPrice: 850,
+    });
+    expect(service.update).toHaveBeenLastCalledWith(
+      'verified-user',
+      'strategy-2',
+      { entryPrice: 850 },
+    );
+
     await controller.registerDevice(request, {
       strategyId: 'strategy-1',
       token: 'f'.repeat(32),
