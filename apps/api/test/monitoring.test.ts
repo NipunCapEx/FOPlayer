@@ -120,6 +120,30 @@ describe('Snapshot validation rejects stale and invalid market data', () => {
     expect(harness.alerts).toHaveLength(0);
   });
 
+  it('applies each strategy\'s configured thresholds during monitoring', async () => {
+    const harness = createHarness(1080);
+    vi.mocked(harness.repository.listActiveStrategies).mockResolvedValueOnce([
+      {
+        ...strategy,
+        thresholds: {
+          cautionPercent: 5,
+          criticalPercent: 7,
+          breachedPercent: 9,
+        },
+      },
+    ]);
+
+    await harness.monitor.runOnce();
+
+    expect(harness.repository.recordAssessment).toHaveBeenCalledWith(
+      strategy.id,
+      expect.objectContaining({ level: 'critical' }),
+      expect.anything(),
+    );
+    expect(harness.alerts).toHaveLength(1);
+    expect(harness.alerts[0]?.kind).toBe('critical');
+  });
+
   it('does not request prices or emit alerts for strategies past expiry', async () => {
     const harness = createHarness(1120);
     vi.mocked(harness.repository.listActiveStrategies).mockResolvedValueOnce([
