@@ -139,7 +139,10 @@ export class StrategyService {
 }
 
 function isValidIsoDate(value: unknown): value is string {
-  if (typeof value !== 'string' || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) {
+  if (
+    typeof value !== 'string' ||
+    !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)
+  ) {
     return false;
   }
   const parsed = new Date(`${value}T00:00:00.000Z`);
