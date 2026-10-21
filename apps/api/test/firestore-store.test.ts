@@ -544,6 +544,14 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       active: true,
     });
 
+    const tokenId = createHash('sha256').update('device-token').digest('hex');
+    await db.collection('deviceTokens').doc(tokenId).set({
+      ownerUid: 'owner-a',
+      strategyId: strategy.id,
+      token: 'device-token',
+      active: true,
+    });
+
     await expect(
       strategies.registerDeviceToken('owner-b', strategy.id, 'device-token'),
     ).resolves.toBe(false);
@@ -588,9 +596,6 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     await expect(
       strategies.listDeviceTokensForStrategy(secondStrategy.id),
     ).resolves.toEqual([]);
-    const tokenId = createHash('sha256')
-      .update(`owner-a\\0${strategy.id}\\0device-token`)
-      .digest('hex');
     const secondTokenId = createHash('sha256')
       .update(`owner-a\\0${secondStrategy.id}\\0device-token`)
       .digest('hex');
