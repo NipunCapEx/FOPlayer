@@ -77,20 +77,42 @@ describe('StrategiesController', () => {
     await controller.createStrategy(request, {
       symbol: 'RELIANCE',
       entryPrice: 1000,
+      expiryDate: '2026-10-29',
       ownerUid: 'attacker',
     });
     expect(service.create).toHaveBeenCalledWith('verified-user', {
       symbol: 'RELIANCE',
       entryPrice: 1000,
+      expiryDate: '2026-10-29',
     });
 
     await controller.updateStrategy(request, 'strategy-1', {
       active: false,
+      expiryDate: '2026-11-26',
       ownerUid: 'attacker',
     });
     expect(service.update).toHaveBeenCalledWith('verified-user', 'strategy-1', {
       active: false,
+      expiryDate: '2026-11-26',
     });
+
+    await controller.createStrategy(request, {
+      symbol: 'SBICARD',
+      entryPrice: 800,
+    });
+    expect(service.create).toHaveBeenLastCalledWith('verified-user', {
+      symbol: 'SBICARD',
+      entryPrice: 800,
+    });
+
+    await controller.updateStrategy(request, 'strategy-2', {
+      entryPrice: 850,
+    });
+    expect(service.update).toHaveBeenLastCalledWith(
+      'verified-user',
+      'strategy-2',
+      { entryPrice: 850 },
+    );
 
     await controller.registerDevice(request, {
       strategyId: 'strategy-1',

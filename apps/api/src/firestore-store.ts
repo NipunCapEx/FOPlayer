@@ -20,15 +20,18 @@ export interface CreateStrategyInput {
   symbol: SupportedSymbol;
   entryPrice: number;
   active: boolean;
+  expiryDate?: string;
 }
 
 export interface UpdateStrategyInput {
   entryPrice?: number;
   active?: boolean;
+  expiryDate?: string;
 }
 
 export interface StrategyRecord extends Strategy {
   ownerUid: string;
+  expiryDate?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,12 +91,18 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.expiryDate !== undefined
+          ? { expiryDate: input.expiryDate }
+          : {}),
         updatedAt,
       });
       return {
         ...current,
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.expiryDate !== undefined
+          ? { expiryDate: input.expiryDate }
+          : {}),
         updatedAt,
       };
     }
@@ -105,6 +114,9 @@ export class FirestoreStrategyStore {
       symbol: input.symbol,
       entryPrice: input.entryPrice,
       active: input.active,
+      ...(input.expiryDate !== undefined
+        ? { expiryDate: input.expiryDate }
+        : {}),
       createdAt: now,
       updatedAt: now,
     };
@@ -129,12 +141,18 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.expiryDate !== undefined
+          ? { expiryDate: input.expiryDate }
+          : {}),
         updatedAt,
       });
       return {
         ...raced,
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.expiryDate !== undefined
+          ? { expiryDate: input.expiryDate }
+          : {}),
         updatedAt,
       };
     }
@@ -175,6 +193,7 @@ export class FirestoreStrategyStore {
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (input.entryPrice !== undefined) patch.entryPrice = input.entryPrice;
     if (input.active !== undefined) patch.active = input.active;
+    if (input.expiryDate !== undefined) patch.expiryDate = input.expiryDate;
     await reference.update(patch);
     return { ...current, ...input, updatedAt: patch.updatedAt as Date };
   }
@@ -465,6 +484,9 @@ function toStrategyRecord(doc: DocumentSnapshotPort): StrategyRecord | null {
     symbol: data.symbol as SupportedSymbol,
     entryPrice: data.entryPrice,
     active: data.active,
+    ...(typeof data.expiryDate === 'string'
+      ? { expiryDate: data.expiryDate }
+      : {}),
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
