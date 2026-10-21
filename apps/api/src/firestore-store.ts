@@ -16,6 +16,7 @@ import type {
 } from './monitoring.js';
 import { FirebaseAdminService } from './firebase-admin.service.js';
 import type { DocumentSnapshotPort, FirestorePort } from './firestore-port.js';
+import type { NotificationDeliveryStateStore } from './notifications.js';
 
 export interface CreateStrategyInput {
   symbol: SupportedSymbol;
