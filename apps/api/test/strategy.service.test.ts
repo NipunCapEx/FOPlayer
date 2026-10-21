@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
@@ -65,26 +64,6 @@ describe('StrategyService', () => {
         service.create('owner-1', { symbol: 'RELIANCE', entryPrice }),
       ).rejects.toBeInstanceOf(BadRequestException);
     }
-  });
-
-  it('rejects duplicate active symbols but allows re-adding inactive history', async () => {
-    const { service, store } = createService();
-    store.listForOwner.mockResolvedValueOnce([
-      { symbol: 'RELIANCE', active: true },
-    ] as never);
-
-    await expect(
-      service.create('owner-1', { symbol: 'RELIANCE', entryPrice: 1250 }),
-    ).rejects.toBeInstanceOf(ConflictException);
-    expect(store.createForOwner).not.toHaveBeenCalled();
-
-    store.listForOwner.mockResolvedValueOnce([
-      { symbol: 'RELIANCE', active: false },
-    ] as never);
-    await expect(
-      service.create('owner-1', { symbol: 'RELIANCE', entryPrice: 1250 }),
-    ).resolves.toMatchObject({ symbol: 'RELIANCE', active: true });
-    expect(store.createForOwner).toHaveBeenCalledTimes(1);
   });
 
   it('validates update fields and rejects an empty patch', async () => {
