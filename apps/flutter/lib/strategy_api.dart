@@ -420,6 +420,19 @@ class StrategyApiClient {
     return UserStrategy.fromJson(response);
   }
 
+  Future<void> registerDeviceToken(String strategyId, String token) async {
+    final response = await _request(
+      'POST',
+      '/api/device-tokens',
+      body: {'strategyId': strategyId, 'token': token},
+    );
+    if (response is! Map<String, dynamic> || response['registered'] != true) {
+      throw const StrategyApiException(
+        'The backend did not confirm device-token registration.',
+      );
+    }
+  }
+
   Future<dynamic> _request(
     String method,
     String path, {
