@@ -199,7 +199,9 @@ describe('StrategyService', () => {
       service.update('owner-1', 'strategy-1', { active: 'false' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
-      service.update('owner-1', 'strategy-1', { notificationsEnabled: 'false' }),
+      service.update('owner-1', 'strategy-1', {
+        notificationsEnabled: 'false',
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update('owner-1', 'strategy-1', {}),
