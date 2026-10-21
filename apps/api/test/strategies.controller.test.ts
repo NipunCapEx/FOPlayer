@@ -91,10 +91,11 @@ describe('StrategiesController', () => {
       expiryDate: '2026-11-26',
       ownerUid: 'attacker',
     });
-    expect(service.update).toHaveBeenCalledWith('verified-user', 'strategy-1', {
-      active: false,
-      expiryDate: '2026-11-26',
-    });
+    expect(service.update).toHaveBeenCalledWith(
+      'verified-user',
+      'strategy-1',
+      { active: false, expiryDate: '2026-11-26' },
+    );
 
     await controller.registerDevice(request, {
       strategyId: 'strategy-1',
