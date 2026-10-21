@@ -1,7 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
-import { isIndianEquityMarketOpen, marketHoursPolicyFromEnvironment } from '../src/monitoring.js';
+import {
+  isIndianEquityMarketOpen,
+  marketHoursPolicyFromEnvironment,
+} from '../src/monitoring.js';
 import { FirebaseAdminService } from '../src/firebase-admin.service.js';
 import { HealthController } from '../src/health.controller.js';
 
