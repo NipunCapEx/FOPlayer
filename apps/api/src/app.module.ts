@@ -66,6 +66,7 @@ export const ALERT_DISPATCHER = Symbol('ALERT_DISPATCHER');
               (strategyId) =>
                 strategyStore.listDeviceTokensForStrategy(strategyId),
               repository,
+              (token) => strategyStore.deactivateDeviceToken(token),
             ),
           );
         }
