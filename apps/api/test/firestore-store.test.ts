@@ -581,6 +581,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
 
     await strategies.deactivateDeviceToken('missing-token');
     await strategies.deactivateDeviceToken('device-token');
+    await strategies.deactivateDeviceToken('device-token');
     await expect(
       strategies.listDeviceTokensForStrategy(strategy.id),
     ).resolves.toEqual(['another-device-token']);
