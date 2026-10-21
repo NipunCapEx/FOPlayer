@@ -99,7 +99,9 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
+        ...(input.thresholds !== undefined
+          ? { thresholds: input.thresholds }
+          : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -538,7 +540,9 @@ function toStrategyRecord(doc: DocumentSnapshotPort): StrategyRecord | null {
     ...(typeof data.expiryDate === 'string'
       ? { expiryDate: data.expiryDate }
       : {}),
-    ...(isRiskThresholds(data.thresholds) ? { thresholds: data.thresholds } : {}),
+    ...(isRiskThresholds(data.thresholds)
+      ? { thresholds: data.thresholds }
+      : {}),
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
