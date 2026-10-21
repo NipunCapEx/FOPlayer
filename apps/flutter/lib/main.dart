@@ -943,6 +943,7 @@ class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
         spotPrice: entry,
         lastUpdated: now,
         isStale: true,
+        expiryDate: expiryDate,
       ),
     );
   }
@@ -1024,7 +1025,9 @@ class _ExpiryDateDialogState extends State<ExpiryDateDialog> {
     final today = DateUtils.dateOnly(DateTime.now());
     final selected = await showDatePicker(
       context: context,
-      initialDate: selectedDate ?? today.add(const Duration(days: 30)),
+      initialDate: selectedDate != null && !selectedDate!.isBefore(today)
+          ? selectedDate!
+          : today.add(const Duration(days: 30)),
       firstDate: today,
       lastDate: today.add(const Duration(days: 365 * 3)),
     );
