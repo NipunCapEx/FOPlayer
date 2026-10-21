@@ -221,6 +221,32 @@ void main() {
       expect(find.byKey(const Key('save-new-symbol-button')), findsOneWidget);
     });
 
+    testWidgets('shows expiry configuration on the instrument card',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: InstrumentCard(
+              instrument: Instrument(
+                symbol: 'RELIANCE',
+                name: 'Reliance Industries',
+                entryPrice: 1000,
+                spotPrice: 1000,
+                lastUpdated: DateTime(2026, 10, 20),
+                expiryDate: DateTime(2026, 11, 26),
+              ),
+              onEditEntry: _noop,
+              onEditExpiry: _noop,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Expiry date'), findsOneWidget);
+      expect(find.text('2026-11-26'), findsOneWidget);
+      expect(find.text('Edit expiry'), findsOneWidget);
+    });
+
     testWidgets('does not display a placeholder as a live market price',
         (tester) async {
       await tester.pumpWidget(
