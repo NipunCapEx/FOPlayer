@@ -30,7 +30,7 @@ Status labels: **Implemented & verified**, **Implemented, verification pending**
 | Default watchlist seed recovery | Resume partial default seeding, avoid duplicate creates under retries/races, and never re-create soft-removed defaults | Implemented & verified (PR #36 CI passed) | `widget_test.dart`, `strategy.service.test.ts`, `firestore-store.test.ts` |
 | Authenticated dashboard failure state | Keep prototype fixtures out of the signed-in dashboard, preserve the last successfully loaded watchlist on refresh failure, and keep retry available | Implemented & verified (PR #33 CI passed) | `widget_test.dart` |
 | Flutter dashboard cards, demo warning and stale state | Widget tests for four tickers, thresholds, stale data and entry validation | Implemented, verification pending | PR 2: await exact-head Flutter CI |
-| Critical user journey | Configure strategy -> provider snapshot -> risk -> outbox -> notification | Planned | API/runtime and persistence integration still required |
+| Critical user journey | Configure strategy -> provider snapshot -> risk -> owner-scoped outbox -> notification delivery | Implemented, CI verification pending | `firestore-store.test.ts`: deterministic end-to-end journey using Firestore fake and notification dispatcher; real Firebase/provider smoke still required |
 | Responsive Flutter Web build and Android release build | Flutter analyze/test/web build; Android release build | Implemented in CI, verification pending | Dashboard follow-up PR fixes missing web platform scaffolding; Android release is manual |
 | Release smoke / rollback | Health/auth/freshness/alert smoke and rollback procedure | Planned | Release runbook |
 
