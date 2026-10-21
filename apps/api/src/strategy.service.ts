@@ -12,11 +12,13 @@ import {
 export interface CreateStrategyCommand {
   symbol: unknown;
   entryPrice: unknown;
+  expiryDate?: unknown;
 }
 
 export interface UpdateStrategyCommand {
   entryPrice?: unknown;
   active?: unknown;
+  expiryDate?: unknown;
 }
 
 @Injectable()
@@ -47,10 +49,15 @@ export class StrategyService {
       );
     }
 
+    if (command.expiryDate !== undefined && !isValidIsoDate(command.expiryDate)) {
+      throw new BadRequestException('expiryDate must be a valid YYYY-MM-DD date');
+    }
+
     return this.store.createForOwner(ownerUid, {
       symbol: command.symbol as SupportedSymbol,
       entryPrice: command.entryPrice,
       active: true,
+      ...(typeof command.expiryDate === 'string' ? { expiryDate: command.expiryDate } : {}),
     });
   }
 
@@ -59,7 +66,7 @@ export class StrategyService {
     strategyId: string,
     command: UpdateStrategyCommand,
   ): Promise<StrategyRecord> {
-    const patch: { entryPrice?: number; active?: boolean } = {};
+    const patch: { entryPrice?: number; active?: boolean; expiryDate?: string } = {};
     if (command.entryPrice !== undefined) {
       if (!isPositiveFinite(command.entryPrice)) {
         throw new BadRequestException(
@@ -73,6 +80,12 @@ export class StrategyService {
         throw new BadRequestException('active must be a boolean');
       }
       patch.active = command.active;
+    }
+    if (command.expiryDate !== undefined) {
+      if (!isValidIsoDate(command.expiryDate)) {
+        throw new BadRequestException('expiryDate must be a valid YYYY-MM-DD date');
+      }
+      patch.expiryDate = command.expiryDate;
     }
     if (Object.keys(patch).length === 0) {
       throw new BadRequestException('at least one supported field is required');
@@ -110,6 +123,14 @@ export class StrategyService {
   async alerts(ownerUid: string): Promise<Record<string, unknown>[]> {
     return this.store.listAlertsForOwner(ownerUid);
   }
+}
+
+function isValidIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+    return false;
+  }
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
 function isPositiveFinite(value: unknown): value is number {
