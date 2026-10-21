@@ -143,6 +143,8 @@ jobs:
           if kotlin.exists():
               path = kotlin
               text = path.read_text()
+              if "import java.util.Properties" not in text:
+                  text = "import java.util.Properties\n" + text
               if "signingConfigs {" not in text:
                   marker = "    buildTypes {"
                   if marker not in text:
@@ -158,11 +160,11 @@ jobs:
 
           '''
                   text = text.replace(marker, signing + marker, 1)
-              if "val keystoreProperties = java.util.Properties()" not in text:
+              if "val keystoreProperties =" not in text:
                   marker = "android {"
                   if marker not in text:
                       raise SystemExit("Could not find android block in Kotlin Gradle file.")
-                  props = '''val keystoreProperties = java.util.Properties()
+                  props = '''val keystoreProperties = Properties()
           val keystorePropertiesFile = rootProject.file("key.properties")
           keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 
