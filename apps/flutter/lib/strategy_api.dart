@@ -126,6 +126,7 @@ class DashboardSnapshot {
     required this.exchangeTimestamp,
     required this.fetchedAt,
     required this.recordedAt,
+    this.historicalCloses = const [],
   });
 
   final String strategyId;
@@ -138,6 +139,7 @@ class DashboardSnapshot {
   final DateTime exchangeTimestamp;
   final DateTime fetchedAt;
   final DateTime recordedAt;
+  final List<double> historicalCloses;
 
   bool isFreshAt(DateTime now) {
     const maxAge = Duration(minutes: 10);
@@ -167,6 +169,14 @@ class DashboardSnapshot {
     final exchangeTimestamp = _parseAlertDate(json['exchangeTimestamp']);
     final fetchedAt = _parseAlertDate(json['fetchedAt']);
     final recordedAt = _parseAlertDate(json['recordedAt']);
+    final rawHistory = json['historicalCloses'];
+    final historicalCloses = rawHistory is List
+        ? rawHistory
+            .whereType<num>()
+            .map((value) => value.toDouble())
+            .where((value) => value.isFinite && value > 0)
+            .toList()
+        : <double>[];
     if (symbol is! String ||
         entryPrice is! num ||
         spotPrice is! num ||
@@ -193,6 +203,7 @@ class DashboardSnapshot {
       exchangeTimestamp: exchangeTimestamp,
       fetchedAt: fetchedAt,
       recordedAt: recordedAt,
+      historicalCloses: historicalCloses,
     );
   }
 }
