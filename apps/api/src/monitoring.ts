@@ -103,9 +103,7 @@ export class RiskMonitor {
 
   async runOnce(): Promise<void> {
     const cycleStartedAt = this.now();
-    const strategies = (
-      await this.repository.listActiveStrategies()
-    ).filter(
+    const strategies = (await this.repository.listActiveStrategies()).filter(
       (strategy) =>
         strategy.active && !isExpiredStrategy(strategy, cycleStartedAt),
     );
