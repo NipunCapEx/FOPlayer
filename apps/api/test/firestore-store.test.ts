@@ -236,8 +236,21 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       strategies.updateForOwner('owner-a', first.id, {
         entryPrice: 1200,
         active: false,
+        thresholds: {
+          cautionPercent: 5,
+          criticalPercent: 7,
+          breachedPercent: 9,
+        },
       }),
-    ).resolves.toMatchObject({ entryPrice: 1200, active: false });
+    ).resolves.toMatchObject({
+      entryPrice: 1200,
+      active: false,
+      thresholds: {
+        cautionPercent: 5,
+        criticalPercent: 7,
+        breachedPercent: 9,
+      },
+    });
   });
 
   it('rejects concurrent duplicate active strategies per owner and symbol', async () => {
