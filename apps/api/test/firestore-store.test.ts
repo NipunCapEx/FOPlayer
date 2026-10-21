@@ -322,14 +322,17 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       active: true,
     });
     await strategies.updateForOwner('owner-a', stable.id, { active: false });
-    await db.collection('strategies').doc('legacy-active').set({
-      ownerUid: 'owner-a',
-      symbol: 'RELIANCE',
-      entryPrice: 1100,
-      active: true,
-      createdAt: new Date('2026-10-01T00:00:00Z'),
-      updatedAt: new Date('2026-10-01T00:00:00Z'),
-    });
+    await db
+      .collection('strategies')
+      .doc('legacy-active')
+      .set({
+        ownerUid: 'owner-a',
+        symbol: 'RELIANCE',
+        entryPrice: 1100,
+        active: true,
+        createdAt: new Date('2026-10-01T00:00:00Z'),
+        updatedAt: new Date('2026-10-01T00:00:00Z'),
+      });
 
     await expect(
       strategies.updateForOwner('owner-a', stable.id, { active: true }),
@@ -343,14 +346,17 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       .update('\0')
       .update('RELIANCE')
       .digest('hex');
-    await db.collection('strategies').doc(id).set({
-      ownerUid: 'owner-a',
-      symbol: 'JSWSTEEL',
-      entryPrice: 900,
-      active: false,
-      createdAt: new Date('2026-10-01T00:00:00Z'),
-      updatedAt: new Date('2026-10-01T00:00:00Z'),
-    });
+    await db
+      .collection('strategies')
+      .doc(id)
+      .set({
+        ownerUid: 'owner-a',
+        symbol: 'JSWSTEEL',
+        entryPrice: 900,
+        active: false,
+        createdAt: new Date('2026-10-01T00:00:00Z'),
+        updatedAt: new Date('2026-10-01T00:00:00Z'),
+      });
 
     await expect(
       strategies.createForOwner('owner-a', {
