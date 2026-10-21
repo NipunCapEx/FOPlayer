@@ -15,6 +15,7 @@ export interface Strategy {
   ownerUid?: string;
   expiryDate?: string;
   thresholds?: RiskThresholds;
+  notificationsEnabled?: boolean;
 }
 
 export type AlertKind =
@@ -34,6 +35,7 @@ export interface RiskAlert {
   price: number;
   movementPercent: number;
   createdAt: Date;
+  notificationsEnabled?: boolean;
 }
 
 export interface AlertDispatcher {
@@ -66,6 +68,7 @@ export interface MonitoringRepository {
   enqueueAlert(alert: RiskAlert): Promise<void>;
   listPendingAlerts(): Promise<RiskAlert[]>;
   markAlertDelivered(idempotencyKey: string, deliveredAt: Date): Promise<void>;
+  markAlertSuppressed(idempotencyKey: string, suppressedAt: Date): Promise<void>;
   recordAlertDeliveryFailure(
     idempotencyKey: string,
     reason: string,
@@ -181,6 +184,13 @@ export class RiskMonitor {
   private async flushPendingAlerts(): Promise<void> {
     const pending = await this.repository.listPendingAlerts();
     for (const alert of pending) {
+      if (alert.notificationsEnabled === false) {
+        await this.repository.markAlertSuppressed(
+          alert.idempotencyKey,
+          this.now(),
+        );
+        continue;
+      }
       try {
         await this.dispatcher.dispatch(alert);
         await this.repository.markAlertDelivered(
@@ -235,6 +245,7 @@ export class RiskMonitor {
       price: assessment.spotPrice,
       movementPercent: assessment.movementPercent,
       createdAt: now,
+      notificationsEnabled: strategy.notificationsEnabled !== false,
     });
 
     const nextState = { ...state, highestSeverity: level };
@@ -298,6 +309,7 @@ export class RiskMonitor {
       price: snapshot.price,
       movementPercent: assessment.movementPercent,
       createdAt: now,
+      notificationsEnabled: strategy.notificationsEnabled !== false,
     });
     this.emittedNonRiskSignals.add(signalKey);
   }
