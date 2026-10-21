@@ -51,10 +51,7 @@ export class StrategyService {
       );
     }
 
-    if (
-      command.entryDate !== undefined &&
-      !isValidIsoDate(command.entryDate)
-    ) {
+    if (command.entryDate !== undefined && !isValidIsoDate(command.entryDate)) {
       throw new BadRequestException(
         'entryDate must be a valid YYYY-MM-DD date',
       );
