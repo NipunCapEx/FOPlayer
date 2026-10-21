@@ -473,6 +473,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             entryPrice: item.entryPrice,
             entryDate: item.entryDate,
             expiryDate: item.expiryDate,
+            thresholds: item.thresholds,
             spotPrice: snapshot?.spotPrice ?? item.entryPrice,
             lastUpdated: snapshot?.exchangeTimestamp ??
                 DateTime.fromMillisecondsSinceEpoch(0),
