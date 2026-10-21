@@ -35,6 +35,11 @@ void main() {
   });
 
   testWidgets('filters alerts by symbol and delivery status', (tester) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     UserAlert makeAlert({
       required String id,
       required String symbol,
@@ -99,7 +104,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.notifications_off_outlined), findsOneWidget);
-    expect(find.text('SUPPRESSED'), findsOneWidget);
+    expect(find.text('SUPPRESSED'), findsNWidgets(2));
 
     await tester.tap(find.byKey(const Key('clear-alert-filters-button')));
     await tester.pumpAndSettle();
