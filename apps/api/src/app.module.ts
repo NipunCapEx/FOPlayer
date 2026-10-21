@@ -104,4 +104,3 @@ export const ALERT_DISPATCHER = Symbol('ALERT_DISPATCHER');
   ],
 })
 export class AppModule {}
-
