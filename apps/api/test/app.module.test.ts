@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import { AppModule } from '../src/app.module.js';
+import { AppModule, readSpecialSessions } from '../src/app.module.js';
 import { FirebaseAdminService } from '../src/firebase-admin.service.js';
 import { HealthController } from '../src/health.controller.js';
 
@@ -68,5 +68,43 @@ describe('AppModule runtime wiring', () => {
     } finally {
       await app.close();
     }
+  });
+});
+
+describe('special market session configuration', () => {
+  it('returns no overrides when the setting is empty', () => {
+    expect(readSpecialSessions(undefined)).toEqual({});
+    expect(readSpecialSessions('  ')).toEqual({});
+  });
+
+  it('parses date-specific open and close times', () => {
+    expect(
+      readSpecialSessions('{"2026-11-08":{"open":"18:00","close":"19:00"}}'),
+    ).toEqual({
+      '2026-11-08': { open: '18:00', close: '19:00' },
+    });
+  });
+
+  it('rejects malformed JSON and non-object values', () => {
+    expect(() => readSpecialSessions('{')).toThrow();
+    expect(() => readSpecialSessions('[]')).toThrow(
+      'FOPLAYER_MARKET_SPECIAL_SESSIONS must be a JSON object.',
+    );
+  });
+
+  it('rejects invalid date keys and invalid session values', () => {
+    expect(() =>
+      readSpecialSessions('{"not-a-date":{"open":"09:00","close":"10:00"}}'),
+    ).toThrow(
+      'Each special market session must use an ISO date and open/close times.',
+    );
+    expect(() => readSpecialSessions('{"2026-11-08":null}')).toThrow(
+      'Each special market session must use an ISO date and open/close times.',
+    );
+    expect(() =>
+      readSpecialSessions('{"2026-11-08":{"open":9,"close":"10:00"}}'),
+    ).toThrow(
+      'Each special market session must include string open and close times.',
+    );
   });
 });
