@@ -105,7 +105,10 @@ export class RiskMonitor {
     const cycleStartedAt = this.now();
     const strategies = (
       await this.repository.listActiveStrategies()
-    ).filter((strategy) => strategy.active && !isExpiredStrategy(strategy, cycleStartedAt));
+    ).filter(
+      (strategy) =>
+        strategy.active && !isExpiredStrategy(strategy, cycleStartedAt),
+    );
     const symbols = [...new Set(strategies.map((s) => s.symbol))];
 
     for (const symbol of symbols) {
@@ -477,5 +480,8 @@ function isExpiredStrategy(strategy: Strategy, now: Date): boolean {
 function isIsoCalendarDate(value: string): boolean {
   if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00.000Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
 }
