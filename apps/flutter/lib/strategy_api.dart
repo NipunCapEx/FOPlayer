@@ -42,7 +42,6 @@ class StrategyThresholds {
       breachedPercent < 100;
 }
 
-
 class UserStrategy {
   const UserStrategy({
     required this.id,
@@ -77,6 +76,7 @@ class UserStrategy {
         (expiryDate != null && expiryDate is! String)) {
       throw const FormatException('Invalid strategy returned by the API.');
     }
+    final parsedThresholds = StrategyThresholds.fromJson(json['thresholds']);
     return UserStrategy(
       id: id,
       symbol: symbol,
@@ -84,8 +84,8 @@ class UserStrategy {
       active: active,
       entryDate: entryDate is String ? DateTime.tryParse(entryDate) : null,
       expiryDate: expiryDate is String ? DateTime.tryParse(expiryDate) : null,
-      thresholds: StrategyThresholds.fromJson(json['thresholds']).isValid
-          ? StrategyThresholds.fromJson(json['thresholds'])
+      thresholds: parsedThresholds.isValid
+          ? parsedThresholds
           : const StrategyThresholds(),
     );
   }
