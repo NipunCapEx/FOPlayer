@@ -13,7 +13,8 @@ UserStrategy strategy(String id, String symbol, {bool active = true}) =>
     );
 
 void main() {
-  test('registers a device token for each active strategy and token refresh', () async {
+  test('registers a device token for each active strategy and token refresh',
+      () async {
     final tokenRefresh = StreamController<String>.broadcast();
     final registrations = <String>[];
     final errors = <Object>[];
@@ -68,7 +69,8 @@ void main() {
     await tokenRefresh.close();
   });
 
-  test('does not read or register a token when notification permission is denied',
+  test(
+      'does not read or register a token when notification permission is denied',
       () async {
     final tokenRefresh = StreamController<String>.broadcast();
     final register = <String>[];
