@@ -19,6 +19,7 @@
 - Keep development and production Firebase projects separate.
 - Configure Firebase project/database identifiers and credentials using environment-specific settings.
 - Store Telegram bot token, Firebase service-account credentials and deployment credentials only in approved secret stores.
+- Configure `FOPLAYER_MARKET_HOLIDAYS` on the backend as a comma-separated list of ISO dates (`YYYY-MM-DD`) from the current official exchange holiday calendar. If any configured date is malformed, monitoring fails closed until the value is corrected.
 - Never embed privileged credentials in Flutter web/mobile assets or commit them to source control.
 - Apply least privilege and review Firebase rules before enabling production traffic.
 
