@@ -15,10 +15,7 @@ import type {
   QuerySnapshotPort,
 } from '../src/firestore-port.js';
 import type { FirebaseAdminService } from '../src/firebase-admin.service.js';
-import {
-  RiskMonitor,
-  type RiskAlert,
-} from '../src/monitoring.js';
+import { RiskMonitor, type RiskAlert } from '../src/monitoring.js';
 import type { MarketDataProvider, MarketSnapshot } from '../src/market-data.js';
 
 type Data = Record<string, unknown>;
