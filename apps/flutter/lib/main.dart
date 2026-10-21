@@ -1328,8 +1328,10 @@ class InstrumentCard extends StatelessWidget {
                     : 'Source: ${instrument.dataSource ?? 'unknown'} · Exchange time: $snapshotTime',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 if (onRemove != null)
                   IconButton(
@@ -1338,6 +1340,19 @@ class InstrumentCard extends StatelessWidget {
                     onPressed: onRemove,
                     icon: const Icon(Icons.remove_circle_outline),
                   ),
+                if (onEditExpiry != null)
+                  TextButton.icon(
+                    onPressed: onEditExpiry,
+                    icon: const Icon(Icons.event_outlined, size: 18),
+                    label: const Text('Edit expiry'),
+                  ),
+                TextButton.icon(
+                  onPressed: onEditEntry,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit entry'),
+                ),
+              ],
+            ),
                 if (onEditExpiry != null)
                   TextButton.icon(
                     onPressed: onEditExpiry,
