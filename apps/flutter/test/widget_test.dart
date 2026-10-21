@@ -295,9 +295,12 @@ void main() {
 
       await tester.tap(find.text('Configure thresholds'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('caution-threshold-input')), '10');
-      await tester.enterText(find.byKey(const Key('critical-threshold-input')), '8');
-      await tester.enterText(find.byKey(const Key('breached-threshold-input')), '12');
+      await tester.enterText(
+          find.byKey(const Key('caution-threshold-input')), '10');
+      await tester.enterText(
+          find.byKey(const Key('critical-threshold-input')), '8');
+      await tester.enterText(
+          find.byKey(const Key('breached-threshold-input')), '12');
       await tester.tap(find.byKey(const Key('save-thresholds-button')));
       await tester.pump();
 
@@ -306,9 +309,12 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.enterText(find.byKey(const Key('caution-threshold-input')), '5');
-      await tester.enterText(find.byKey(const Key('critical-threshold-input')), '7');
-      await tester.enterText(find.byKey(const Key('breached-threshold-input')), '9');
+      await tester.enterText(
+          find.byKey(const Key('caution-threshold-input')), '5');
+      await tester.enterText(
+          find.byKey(const Key('critical-threshold-input')), '7');
+      await tester.enterText(
+          find.byKey(const Key('breached-threshold-input')), '9');
       await tester.tap(find.byKey(const Key('save-thresholds-button')));
       await tester.pumpAndSettle();
 
