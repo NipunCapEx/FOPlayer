@@ -15,6 +15,11 @@ import type {
   QuerySnapshotPort,
 } from '../src/firestore-port.js';
 import type { FirebaseAdminService } from '../src/firebase-admin.service.js';
+import {
+  RiskMonitor,
+  type RiskAlert,
+} from '../src/monitoring.js';
+import type { MarketDataProvider, MarketSnapshot } from '../src/market-data.js';
 
 type Data = Record<string, unknown>;
 
@@ -766,5 +771,71 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
     expect(
       await restartedRepository.hasDeliveredTarget(key, 'channel:fcm'),
     ).toBe(false);
+  });
+});
+
+describe('Critical monitoring user journey — strategy to delivered alert', () => {
+  it('persists a fresh assessment, queues an owner-scoped alert, and delivers it', async () => {
+    const { strategies, monitoring, db } = createStores();
+    const strategy = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    const now = new Date('2026-10-21T04:30:00.000Z');
+    const snapshot: MarketSnapshot = {
+      symbol: 'RELIANCE',
+      price: 1080,
+      previousClose: 1080,
+      exchangeTimestamp: now,
+      fetchedAt: now,
+      source: 'deterministic-integration-fixture',
+      historicalCloses: [100, 100.1, 99.9, 100.05, 99.95, 100.1, 100],
+    };
+    const provider: MarketDataProvider = {
+      getSnapshot: async (symbol) => {
+        expect(symbol).toBe('RELIANCE');
+        return snapshot;
+      },
+    };
+    const dispatched: RiskAlert[] = [];
+    const monitor = new RiskMonitor(
+      provider,
+      monitoring,
+      {
+        dispatch: async (alert) => {
+          dispatched.push(alert);
+        },
+      },
+      { now: () => now },
+    );
+
+    await monitor.runOnce();
+
+    const dashboard = await strategies.getDashboard('owner-a');
+    expect(dashboard.snapshots).toHaveLength(1);
+    expect(dashboard.snapshots[0]?.assessment.level).toBe('caution');
+    expect(dashboard.alerts).toHaveLength(1);
+    expect(dashboard.alerts[0]?.ownerUid).toBe('owner-a');
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0]).toMatchObject({
+      strategyId: strategy.id,
+      ownerUid: 'owner-a',
+      symbol: 'RELIANCE',
+      kind: 'caution',
+    });
+    expect(await monitoring.listPendingAlerts()).toHaveLength(0);
+
+    const storedAlerts = [...db.records('alerts').values()];
+    expect(storedAlerts).toHaveLength(1);
+    expect(storedAlerts[0]).toMatchObject({
+      ownerUid: 'owner-a',
+      status: 'delivered',
+      kind: 'caution',
+    });
+    expect(await monitoring.getRiskEpisodeState(strategy.id)).toEqual({
+      episode: 1,
+      highestSeverity: 1,
+    });
   });
 });
