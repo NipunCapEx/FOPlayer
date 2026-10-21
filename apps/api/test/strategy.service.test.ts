@@ -24,6 +24,7 @@ function createService() {
       symbol: 'RELIANCE' as const,
       entryPrice: input.entryPrice ?? 100,
       active: input.active ?? true,
+      ...(input.entryDate !== undefined ? { entryDate: input.entryDate } : {}),
       ...(input.expiryDate !== undefined
         ? { expiryDate: input.expiryDate }
         : {}),
@@ -40,12 +41,13 @@ function createService() {
 }
 
 describe('StrategyService', () => {
-  it('creates a supported strategy only with a positive finite entry', async () => {
+  it('creates a supported strategy only with valid entry and date fields', async () => {
     const { service, store } = createService();
     await expect(
       service.create('owner-1', {
         symbol: 'RELIANCE',
         entryPrice: 1250,
+        entryDate: '2026-10-15',
         expiryDate: '2026-10-29',
       }),
     ).resolves.toMatchObject({
@@ -53,17 +55,23 @@ describe('StrategyService', () => {
       symbol: 'RELIANCE',
       entryPrice: 1250,
       active: true,
+      entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
     });
     expect(store.createForOwner).toHaveBeenCalledWith('owner-1', {
       symbol: 'RELIANCE',
       entryPrice: 1250,
       active: true,
+      entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
     });
 
     await expect(
-      service.create('owner-1', { symbol: 'UNKNOWN', entryPrice: 100 }),
+      service.create('owner-1', {
+        symbol: 'RELIANCE',
+        entryPrice: 100,
+        entryDate: 'not-a-date',
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.create('owner-1', {
@@ -71,6 +79,9 @@ describe('StrategyService', () => {
         entryPrice: 100,
         expiryDate: '2026-02-30',
       }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.create('owner-1', { symbol: 'UNKNOWN', entryPrice: 100 }),
     ).rejects.toBeInstanceOf(BadRequestException);
     for (const entryPrice of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
       await expect(
@@ -85,15 +96,20 @@ describe('StrategyService', () => {
       service.update('owner-1', 'strategy-1', {
         entryPrice: 1500,
         active: false,
+        entryDate: '2026-10-16',
         expiryDate: '2026-11-26',
       }),
     ).resolves.toMatchObject({
       entryPrice: 1500,
       active: false,
+      entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
     });
     await expect(
       service.update('owner-1', 'strategy-1', { entryPrice: 0 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.update('owner-1', 'strategy-1', { entryDate: 'tomorrow' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update('owner-1', 'strategy-1', { expiryDate: 'tomorrow' }),

@@ -9,6 +9,7 @@ class UserStrategy {
     required this.symbol,
     required this.entryPrice,
     required this.active,
+    this.entryDate,
     this.expiryDate,
   });
 
@@ -16,6 +17,7 @@ class UserStrategy {
   final String symbol;
   final double entryPrice;
   final bool active;
+  final DateTime? entryDate;
   final DateTime? expiryDate;
 
   factory UserStrategy.fromJson(Map<String, dynamic> json) {
@@ -23,11 +25,13 @@ class UserStrategy {
     final symbol = json['symbol'];
     final entryPrice = json['entryPrice'];
     final active = json['active'];
+    final entryDate = json['entryDate'];
     final expiryDate = json['expiryDate'];
     if (id is! String ||
         symbol is! String ||
         entryPrice is! num ||
         active is! bool ||
+        (entryDate != null && entryDate is! String) ||
         (expiryDate != null && expiryDate is! String)) {
       throw const FormatException('Invalid strategy returned by the API.');
     }
@@ -36,6 +40,7 @@ class UserStrategy {
       symbol: symbol,
       entryPrice: entryPrice.toDouble(),
       active: active,
+      entryDate: entryDate is String ? DateTime.tryParse(entryDate) : null,
       expiryDate: expiryDate is String ? DateTime.tryParse(expiryDate) : null,
     );
   }
@@ -301,6 +306,7 @@ class StrategyApiClient {
   Future<UserStrategy> createStrategy({
     required String symbol,
     required double entryPrice,
+    DateTime? entryDate,
     DateTime? expiryDate,
   }) async {
     final response = await _request(
@@ -309,6 +315,7 @@ class StrategyApiClient {
       body: {
         'symbol': symbol,
         'entryPrice': entryPrice,
+        if (entryDate != null) 'entryDate': _formatDateOnly(entryDate),
         if (expiryDate != null) 'expiryDate': _formatDateOnly(expiryDate),
       },
     );
@@ -322,11 +329,13 @@ class StrategyApiClient {
     String id, {
     double? entryPrice,
     bool? active,
+    DateTime? entryDate,
     DateTime? expiryDate,
   }) async {
     final body = <String, dynamic>{};
     if (entryPrice != null) body['entryPrice'] = entryPrice;
     if (active != null) body['active'] = active;
+    if (entryDate != null) body['entryDate'] = _formatDateOnly(entryDate);
     if (expiryDate != null) body['expiryDate'] = _formatDateOnly(expiryDate);
     final response = await _request(
       'PATCH',

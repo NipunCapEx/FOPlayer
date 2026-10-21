@@ -77,22 +77,26 @@ describe('StrategiesController', () => {
     await controller.createStrategy(request, {
       symbol: 'RELIANCE',
       entryPrice: 1000,
+      entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
       ownerUid: 'attacker',
     });
     expect(service.create).toHaveBeenCalledWith('verified-user', {
       symbol: 'RELIANCE',
       entryPrice: 1000,
+      entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
     });
 
     await controller.updateStrategy(request, 'strategy-1', {
       active: false,
+      entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
       ownerUid: 'attacker',
     });
     expect(service.update).toHaveBeenCalledWith('verified-user', 'strategy-1', {
       active: false,
+      entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
     });
 

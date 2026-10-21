@@ -12,12 +12,14 @@ import {
 export interface CreateStrategyCommand {
   symbol: unknown;
   entryPrice: unknown;
+  entryDate?: unknown;
   expiryDate?: unknown;
 }
 
 export interface UpdateStrategyCommand {
   entryPrice?: unknown;
   active?: unknown;
+  entryDate?: unknown;
   expiryDate?: unknown;
 }
 
@@ -49,6 +51,12 @@ export class StrategyService {
       );
     }
 
+    if (command.entryDate !== undefined && !isValidIsoDate(command.entryDate)) {
+      throw new BadRequestException(
+        'entryDate must be a valid YYYY-MM-DD date',
+      );
+    }
+
     if (
       command.expiryDate !== undefined &&
       !isValidIsoDate(command.expiryDate)
@@ -62,6 +70,9 @@ export class StrategyService {
       symbol: command.symbol as SupportedSymbol,
       entryPrice: command.entryPrice,
       active: true,
+      ...(typeof command.entryDate === 'string'
+        ? { entryDate: command.entryDate }
+        : {}),
       ...(typeof command.expiryDate === 'string'
         ? { expiryDate: command.expiryDate }
         : {}),
@@ -77,6 +88,7 @@ export class StrategyService {
       entryPrice?: number;
       active?: boolean;
       expiryDate?: string;
+      entryDate?: string;
     } = {};
     if (command.entryPrice !== undefined) {
       if (!isPositiveFinite(command.entryPrice)) {
@@ -91,6 +103,14 @@ export class StrategyService {
         throw new BadRequestException('active must be a boolean');
       }
       patch.active = command.active;
+    }
+    if (command.entryDate !== undefined) {
+      if (!isValidIsoDate(command.entryDate)) {
+        throw new BadRequestException(
+          'entryDate must be a valid YYYY-MM-DD date',
+        );
+      }
+      patch.entryDate = command.entryDate;
     }
     if (command.expiryDate !== undefined) {
       if (!isValidIsoDate(command.expiryDate)) {

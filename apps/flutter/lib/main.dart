@@ -34,6 +34,7 @@ class Instrument {
     this.hasSpotPrice = true,
     this.dataSource,
     this.fetchedAt,
+    this.entryDate,
     this.expiryDate,
   });
 
@@ -46,6 +47,7 @@ class Instrument {
   final bool hasSpotPrice;
   final String? dataSource;
   final DateTime? fetchedAt;
+  final DateTime? entryDate;
   final DateTime? expiryDate;
 
   bool get isExpired {
@@ -93,6 +95,7 @@ class Instrument {
     bool? hasSpotPrice,
     String? dataSource,
     DateTime? fetchedAt,
+    DateTime? entryDate,
     DateTime? expiryDate,
   }) =>
       Instrument(
@@ -105,6 +108,7 @@ class Instrument {
         hasSpotPrice: hasSpotPrice ?? this.hasSpotPrice,
         dataSource: dataSource ?? this.dataSource,
         fetchedAt: fetchedAt ?? this.fetchedAt,
+        entryDate: entryDate ?? this.entryDate,
         expiryDate: expiryDate ?? this.expiryDate,
       );
 }
@@ -427,6 +431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           await apiClient.createStrategy(
             symbol: item.symbol,
             entryPrice: item.entryPrice,
+            entryDate: item.entryDate,
             expiryDate: item.expiryDate,
           );
         }
@@ -451,6 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             name:
                 fixture?.name ?? _supportedSymbols[item.symbol] ?? item.symbol,
             entryPrice: item.entryPrice,
+            entryDate: item.entryDate,
             expiryDate: item.expiryDate,
             spotPrice: snapshot?.spotPrice ?? item.entryPrice,
             lastUpdated: snapshot?.exchangeTimestamp ??
@@ -509,6 +515,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : await widget.apiClient!.createStrategy(
               symbol: result.symbol,
               entryPrice: result.entryPrice,
+              entryDate: result.entryDate,
               expiryDate: result.expiryDate,
             );
       if (!mounted) return;
@@ -551,6 +558,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
         content: Text('${instrument.symbol} removed from this dashboard.'),
       ),
     );
+  }
+
+  Future<void> _editEntryDate(Instrument instrument) async {
+    final newDate = await showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) => EntryDateDialog(instrument: instrument),
+    );
+    if (newDate == null || !mounted) return;
+    try {
+      final id = _strategyIds[instrument.symbol];
+      if (widget.apiClient != null && id != null) {
+        await widget.apiClient!.updateStrategy(id, entryDate: newDate);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save entry date: $error')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      instruments = [
+        for (final item in instruments)
+          if (item.symbol == instrument.symbol)
+            item.copyWith(entryDate: newDate)
+          else
+            item,
+      ];
+    });
   }
 
   Future<void> _editExpiry(Instrument instrument) async {
@@ -841,6 +879,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: InstrumentCard(
                               instrument: instrument,
                               onEditEntry: () => _editEntry(instrument),
+                              onEditEntryDate: () => _editEntryDate(instrument),
                               onEditExpiry: () => _editExpiry(instrument),
                               onRemove: () => _removeInstrument(instrument),
                               isDemo: widget.apiClient == null,
@@ -906,6 +945,7 @@ class AddInstrumentDialog extends StatefulWidget {
 class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
   late String symbol;
   late final TextEditingController entryController;
+  DateTime? entryDate;
   DateTime? expiryDate;
 
   @override
@@ -919,6 +959,17 @@ class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
   void dispose() {
     entryController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectEntryDate() async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: entryDate ?? today,
+      firstDate: today.subtract(const Duration(days: 365 * 10)),
+      lastDate: today,
+    );
+    if (selected != null && mounted) setState(() => entryDate = selected);
   }
 
   Future<void> _selectExpiry() async {
@@ -950,6 +1001,7 @@ class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
         spotPrice: entry,
         lastUpdated: now,
         isStale: true,
+        entryDate: entryDate,
         expiryDate: expiryDate,
       ),
     );
@@ -973,6 +1025,15 @@ class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
             onChanged: (value) {
               if (value != null) setState(() => symbol = value);
             },
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            key: const Key('new-entry-date-button'),
+            onPressed: _selectEntryDate,
+            icon: const Icon(Icons.event_available),
+            label: Text(entryDate == null
+                ? 'Set entry date (optional)'
+                : 'Entry date: ${_formatDateOnly(entryDate!)}'),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
@@ -1004,6 +1065,66 @@ class _AddInstrumentDialogState extends State<AddInstrumentDialog> {
           key: const Key('save-new-symbol-button'),
           onPressed: _save,
           child: const Text('Add symbol'),
+        ),
+      ],
+    );
+  }
+}
+
+class EntryDateDialog extends StatefulWidget {
+  const EntryDateDialog({required this.instrument, super.key});
+
+  final Instrument instrument;
+
+  @override
+  State<EntryDateDialog> createState() => _EntryDateDialogState();
+}
+
+class _EntryDateDialogState extends State<EntryDateDialog> {
+  DateTime? selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedDate = widget.instrument.entryDate;
+  }
+
+  Future<void> _selectDate() async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: selectedDate != null && !selectedDate!.isAfter(today)
+          ? selectedDate!
+          : today,
+      firstDate: today.subtract(const Duration(days: 365 * 10)),
+      lastDate: today,
+    );
+    if (selected != null && mounted) setState(() => selectedDate = selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Edit ${widget.instrument.symbol} entry date'),
+      content: OutlinedButton.icon(
+        key: const Key('select-entry-date-button'),
+        onPressed: _selectDate,
+        icon: const Icon(Icons.event_available),
+        label: Text(selectedDate == null
+            ? 'Choose entry date'
+            : _formatDateOnly(selectedDate!)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('save-entry-date-button'),
+          onPressed: selectedDate == null
+              ? null
+              : () => Navigator.pop(context, selectedDate),
+          child: const Text('Save entry date'),
         ),
       ],
     );
@@ -1182,6 +1303,7 @@ class InstrumentCard extends StatelessWidget {
     required this.instrument,
     required this.onEditEntry,
     this.onRemove,
+    this.onEditEntryDate,
     this.onEditExpiry,
     this.isDemo = true,
     super.key,
@@ -1190,6 +1312,7 @@ class InstrumentCard extends StatelessWidget {
   final Instrument instrument;
   final VoidCallback onEditEntry;
   final VoidCallback? onRemove;
+  final VoidCallback? onEditEntryDate;
   final VoidCallback? onEditExpiry;
   final bool isDemo;
 
@@ -1306,6 +1429,17 @@ class InstrumentCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(
                 children: [
+                  const Expanded(child: Text('Entry date')),
+                  Text(instrument.entryDate == null
+                      ? 'Not set'
+                      : _formatDateOnly(instrument.entryDate!)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
                   const Expanded(child: Text('Expiry date')),
                   Text(instrument.expiryDate == null
                       ? 'Not set'
@@ -1351,6 +1485,12 @@ class InstrumentCard extends StatelessWidget {
                     tooltip: 'Remove ${instrument.symbol}',
                     onPressed: onRemove,
                     icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                if (onEditEntryDate != null)
+                  TextButton.icon(
+                    onPressed: onEditEntryDate,
+                    icon: const Icon(Icons.event_available, size: 18),
+                    label: const Text('Edit entry date'),
                   ),
                 if (onEditExpiry != null)
                   TextButton.icon(
