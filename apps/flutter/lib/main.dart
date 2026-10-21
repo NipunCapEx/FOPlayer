@@ -932,7 +932,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onEditEntry: () => _editEntry(instrument),
                               onEditEntryDate: () => _editEntryDate(instrument),
                               onEditExpiry: () => _editExpiry(instrument),
-                              onEditThresholds: () => _editThresholds(instrument),
+                              onEditThresholds: () =>
+                                  _editThresholds(instrument),
                               onRemove: () => _removeInstrument(instrument),
                               isDemo: widget.apiClient == null,
                             ),
