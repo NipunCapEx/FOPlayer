@@ -144,7 +144,7 @@ jobs:
               path = kotlin
               text = path.read_text()
               if "import java.util.Properties" not in text:
-                  text = "import java.util.Properties\\n" + text
+                  text = "import java.util.Properties\n" + text
               if "signingConfigs {" not in text:
                   marker = "    buildTypes {"
                   if marker not in text:
