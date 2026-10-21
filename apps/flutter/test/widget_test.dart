@@ -5,7 +5,8 @@ import 'package:foplayer/main.dart';
 import 'package:foplayer/strategy_api.dart';
 
 void main() {
-  test('maps a saved notification preference into the dashboard instrument', () {
+  test('maps a saved notification preference into the dashboard instrument',
+      () {
     final strategy = UserStrategy(
       id: 'strategy-1',
       symbol: 'RELIANCE',
@@ -27,7 +28,6 @@ void main() {
     expect(instrument.hasSpotPrice, isFalse);
     expect(instrument.isStale, isTrue);
   });
-
 
   testWidgets('shows Google login entry point', (tester) async {
     await tester.pumpWidget(
