@@ -38,6 +38,7 @@ class Instrument {
     this.expiryDate,
     this.historicalCloses = const [],
     this.thresholds = const StrategyThresholds(),
+    this.notificationsEnabled = true,
   });
 
   final String symbol;
@@ -53,6 +54,7 @@ class Instrument {
   final DateTime? expiryDate;
   final List<double> historicalCloses;
   final StrategyThresholds thresholds;
+  final bool notificationsEnabled;
 
   bool get isExpired {
     final expiry = expiryDate;
@@ -111,6 +113,7 @@ class Instrument {
     DateTime? expiryDate,
     List<double>? historicalCloses,
     StrategyThresholds? thresholds,
+    bool? notificationsEnabled,
   }) =>
       Instrument(
         symbol: symbol,
@@ -126,6 +129,8 @@ class Instrument {
         expiryDate: expiryDate ?? this.expiryDate,
         historicalCloses: historicalCloses ?? this.historicalCloses,
         thresholds: thresholds ?? this.thresholds,
+        notificationsEnabled:
+            notificationsEnabled ?? this.notificationsEnabled,
       );
 }
 
@@ -480,6 +485,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             entryDate: item.entryDate,
             expiryDate: item.expiryDate,
             thresholds: item.thresholds,
+            notificationsEnabled: item.notificationsEnabled,
           );
         } catch (_) {
           // A concurrent client or a timed-out response may have saved the
@@ -587,6 +593,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               entryDate: result.entryDate,
               expiryDate: result.expiryDate,
               thresholds: result.thresholds,
+              notificationsEnabled: result.notificationsEnabled,
             );
       if (!mounted) return;
       setState(() {
@@ -628,6 +635,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
         content: Text('${instrument.symbol} removed from this dashboard.'),
       ),
     );
+  }
+
+  Future<void> _setNotificationsEnabled(
+    Instrument instrument,
+    bool enabled,
+  ) async {
+    final id = _strategyIds[instrument.symbol];
+    try {
+      if (widget.apiClient != null && id != null) {
+        await widget.apiClient!.updateStrategy(
+          id,
+          notificationsEnabled: enabled,
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save notification preference: $error')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      instruments = [
+        for (final item in instruments)
+          if (item.symbol == instrument.symbol)
+            item.copyWith(notificationsEnabled: enabled)
+          else
+            item,
+      ];
+    });
   }
 
   Future<void> _editThresholds(Instrument instrument) async {
@@ -986,6 +1025,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onEditExpiry: () => _editExpiry(instrument),
                               onEditThresholds: () =>
                                   _editThresholds(instrument),
+                              onNotificationsChanged: widget.apiClient == null
+                                  ? null
+                                  : (enabled) =>
+                                      _setNotificationsEnabled(instrument, enabled),
                               onRemove: () => _removeInstrument(instrument),
                               isDemo: widget.apiClient == null,
                             ),
@@ -1515,6 +1558,7 @@ class InstrumentCard extends StatelessWidget {
     this.onEditEntryDate,
     this.onEditExpiry,
     this.onEditThresholds,
+    this.onNotificationsChanged,
     this.isDemo = true,
     super.key,
   });
@@ -1525,6 +1569,7 @@ class InstrumentCard extends StatelessWidget {
   final VoidCallback? onEditEntryDate;
   final VoidCallback? onEditExpiry;
   final VoidCallback? onEditThresholds;
+  final ValueChanged<bool>? onNotificationsChanged;
   final bool isDemo;
 
   @override
@@ -1635,6 +1680,17 @@ class InstrumentCard extends StatelessWidget {
               ],
             ),
             const Divider(height: 28),
+            if (onNotificationsChanged != null)
+              SwitchListTile.adaptive(
+                key: Key('notifications-${instrument.symbol}'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Risk notifications'),
+                subtitle: Text(instrument.notificationsEnabled
+                    ? 'Alerts are sent for this strategy'
+                    : 'Alerts are saved but notifications are muted'),
+                value: instrument.notificationsEnabled,
+                onChanged: onNotificationsChanged,
+              ),
             _PriceRow(label: 'Entry', value: instrument.entryPrice),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
