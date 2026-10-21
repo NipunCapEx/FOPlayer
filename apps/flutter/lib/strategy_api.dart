@@ -9,22 +9,26 @@ class UserStrategy {
     required this.symbol,
     required this.entryPrice,
     required this.active,
+    this.expiryDate,
   });
 
   final String id;
   final String symbol;
   final double entryPrice;
   final bool active;
+  final DateTime? expiryDate;
 
   factory UserStrategy.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     final symbol = json['symbol'];
     final entryPrice = json['entryPrice'];
     final active = json['active'];
+    final expiryDate = json['expiryDate'];
     if (id is! String ||
         symbol is! String ||
         entryPrice is! num ||
-        active is! bool) {
+        active is! bool ||
+        (expiryDate != null && expiryDate is! String)) {
       throw const FormatException('Invalid strategy returned by the API.');
     }
     return UserStrategy(
@@ -32,6 +36,7 @@ class UserStrategy {
       symbol: symbol,
       entryPrice: entryPrice.toDouble(),
       active: active,
+      expiryDate: expiryDate is String ? DateTime.tryParse(expiryDate) : null,
     );
   }
 }
@@ -296,6 +301,7 @@ class StrategyApiClient {
   Future<UserStrategy> createStrategy({
     required String symbol,
     required double entryPrice,
+    DateTime? expiryDate,
   }) async {
     final response = await _request(
       'POST',
@@ -303,6 +309,7 @@ class StrategyApiClient {
       body: {
         'symbol': symbol,
         'entryPrice': entryPrice,
+        if (expiryDate != null) 'expiryDate': _formatDateOnly(expiryDate),
       },
     );
     if (response is! Map<String, dynamic>) {
@@ -315,10 +322,12 @@ class StrategyApiClient {
     String id, {
     double? entryPrice,
     bool? active,
+    DateTime? expiryDate,
   }) async {
     final body = <String, dynamic>{};
     if (entryPrice != null) body['entryPrice'] = entryPrice;
     if (active != null) body['active'] = active;
+    if (expiryDate != null) body['expiryDate'] = _formatDateOnly(expiryDate);
     final response = await _request(
       'PATCH',
       '/api/strategies/${Uri.encodeComponent(id)}',
@@ -392,4 +401,11 @@ class StrategyApiClient {
     }
     return jsonDecode(response.body);
   }
+}
+
+String _formatDateOnly(DateTime value) {
+  final year = value.year.toString().padLeft(4, '0');
+  final month = value.month.toString().padLeft(2, '0');
+  final day = value.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
 }
