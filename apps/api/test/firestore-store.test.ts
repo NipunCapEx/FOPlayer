@@ -551,6 +551,12 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       token: 'device-token',
       active: true,
     });
+    await db.collection('deviceTokens').doc('duplicate-token-association').set({
+      ownerUid: 'owner-a',
+      strategyId: strategy.id,
+      token: 'device-token',
+      active: true,
+    });
 
     await expect(
       strategies.registerDeviceToken('owner-b', strategy.id, 'device-token'),
@@ -604,6 +610,16 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     ).toMatchObject({
       active: false,
       deactivatedReason: 'fcm-unregistered',
+    });
+    expect(
+      (await db
+        .collection('deviceTokens')
+        .doc('duplicate-token-association')
+        .get())
+          .data(),
+    ).toMatchObject({
+      active: false,
+      deactivatedReason: 'duplicate-token-registration',
     });
     expect(
       (await db.collection('deviceTokens').doc(secondTokenId).get()).data(),
