@@ -1,3 +1,8 @@
+import 'dart:convert';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+
 class StrategyThresholds {
   const StrategyThresholds({
     this.cautionPercent = 8,
@@ -37,10 +42,6 @@ class StrategyThresholds {
       breachedPercent < 100;
 }
 
-import 'dart:convert';
-
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
 
 class UserStrategy {
   const UserStrategy({
