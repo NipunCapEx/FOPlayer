@@ -88,6 +88,7 @@ export class FcmTransport implements NotificationTransport {
     private readonly sender: FcmSender,
     private readonly getDeviceTokens: (strategyId: string) => Promise<string[]>,
     private readonly deliveryState?: NotificationDeliveryStateStore,
+    private readonly deactivateDeviceToken?: (token: string) => Promise<void>,
   ) {}
 
   async send(alert: RiskAlert): Promise<void> {
