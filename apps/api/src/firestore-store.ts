@@ -100,7 +100,9 @@ export class FirestoreStrategyStore {
         ...current,
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.expiryDate !== undefined ? { expiryDate: input.expiryDate } : {}),
+        ...(input.expiryDate !== undefined
+          ? { expiryDate: input.expiryDate }
+          : {}),
         updatedAt,
       };
     }
