@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import {
   SUPPORTED_SYMBOLS,
   type SupportedSymbol,
@@ -60,7 +60,44 @@ export class FirestoreStrategyStore {
     ownerUid: string,
     input: CreateStrategyInput,
   ): Promise<StrategyRecord> {
-    const reference = this.db.collection('strategies').doc();
+    const activeForSymbol = (await this.listForOwner(ownerUid)).find(
+      (strategy) => strategy.active && strategy.symbol === input.symbol,
+    );
+    if (activeForSymbol) {
+      throw new ConflictException(
+        'an active strategy already exists for this symbol',
+      );
+    }
+
+    // A stable owner+symbol document ID makes concurrent create requests
+    // contend on the same Firestore document rather than creating duplicates.
+    const reference = this.db
+      .collection('strategies')
+      .doc(strategyDocumentId(ownerUid, input.symbol));
+    const current = toStrategyRecord(await reference.get());
+    if (current) {
+      if (current.ownerUid !== ownerUid || current.symbol !== input.symbol) {
+        throw new ConflictException('strategy identity collision');
+      }
+      if (current.active) {
+        throw new ConflictException(
+          'an active strategy already exists for this symbol',
+        );
+      }
+      const updatedAt = new Date();
+      await reference.update({
+        entryPrice: input.entryPrice,
+        active: input.active,
+        updatedAt,
+      });
+      return {
+        ...current,
+        entryPrice: input.entryPrice,
+        active: input.active,
+        updatedAt,
+      };
+    }
+
     const now = new Date();
     const record: StrategyRecord = {
       id: reference.id,
@@ -71,8 +108,36 @@ export class FirestoreStrategyStore {
       createdAt: now,
       updatedAt: now,
     };
-    await reference.set(record as unknown as Record<string, unknown>);
-    return record;
+    try {
+      await reference.create(record as unknown as Record<string, unknown>);
+      return record;
+    } catch (error) {
+      if (!isAlreadyExists(error)) throw error;
+      // Another request won the create race. Never overwrite its active entry.
+      const raced = toStrategyRecord(await reference.get());
+      if (
+        !raced ||
+        raced.ownerUid !== ownerUid ||
+        raced.symbol !== input.symbol ||
+        raced.active
+      ) {
+        throw new ConflictException(
+          'an active strategy already exists for this symbol',
+        );
+      }
+      const updatedAt = new Date();
+      await reference.update({
+        entryPrice: input.entryPrice,
+        active: input.active,
+        updatedAt,
+      });
+      return {
+        ...raced,
+        entryPrice: input.entryPrice,
+        active: input.active,
+        updatedAt,
+      };
+    }
   }
 
   async updateForOwner(
@@ -404,6 +469,14 @@ function isAlreadyExists(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? error.code : undefined;
   return code === 6 || code === 'already-exists';
+}
+
+function strategyDocumentId(ownerUid: string, symbol: SupportedSymbol): string {
+  return createHash('sha256')
+    .update(ownerUid)
+    .update('\0')
+    .update(symbol)
+    .digest('hex');
 }
 
 function alertDocumentId(idempotencyKey: string): string {
