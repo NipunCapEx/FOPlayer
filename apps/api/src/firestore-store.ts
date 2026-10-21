@@ -5,6 +5,7 @@ import {
   SUPPORTED_SYMBOLS,
   type SupportedSymbol,
   type RiskAssessment,
+  type RiskThresholds,
 } from './risk-engine.js';
 import type { MarketSnapshot } from './market-data.js';
 import type {
@@ -22,6 +23,7 @@ export interface CreateStrategyInput {
   active: boolean;
   entryDate?: string;
   expiryDate?: string;
+  thresholds?: RiskThresholds;
 }
 
 export interface UpdateStrategyInput {
@@ -29,12 +31,14 @@ export interface UpdateStrategyInput {
   active?: boolean;
   entryDate?: string;
   expiryDate?: string;
+  thresholds?: RiskThresholds;
 }
 
 export interface StrategyRecord extends Strategy {
   ownerUid: string;
   entryDate?: string;
   expiryDate?: string;
+  thresholds?: RiskThresholds;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +99,7 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -107,6 +112,7 @@ export class FirestoreStrategyStore {
         ...current,
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -124,6 +130,7 @@ export class FirestoreStrategyStore {
       symbol: input.symbol,
       entryPrice: input.entryPrice,
       active: input.active,
+      ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
       ...(input.entryDate !== undefined ? { entryDate: input.entryDate } : {}),
       ...(input.expiryDate !== undefined
         ? { expiryDate: input.expiryDate }
@@ -152,6 +159,7 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -164,6 +172,7 @@ export class FirestoreStrategyStore {
         ...raced,
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -212,6 +221,7 @@ export class FirestoreStrategyStore {
     if (input.active !== undefined) patch.active = input.active;
     if (input.entryDate !== undefined) patch.entryDate = input.entryDate;
     if (input.expiryDate !== undefined) patch.expiryDate = input.expiryDate;
+    if (input.thresholds !== undefined) patch.thresholds = input.thresholds;
     await reference.update(patch);
     return { ...current, ...input, updatedAt: patch.updatedAt as Date };
   }
@@ -332,6 +342,9 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
         ownerUid: record.ownerUid,
         ...(record.expiryDate !== undefined
           ? { expiryDate: record.expiryDate }
+          : {}),
+        ...(record.thresholds !== undefined
+          ? { thresholds: record.thresholds }
           : {}),
       });
     }
@@ -525,6 +538,7 @@ function toStrategyRecord(doc: DocumentSnapshotPort): StrategyRecord | null {
     ...(typeof data.expiryDate === 'string'
       ? { expiryDate: data.expiryDate }
       : {}),
+    ...(isRiskThresholds(data.thresholds) ? { thresholds: data.thresholds } : {}),
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
@@ -551,6 +565,23 @@ function isAlreadyExists(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? error.code : undefined;
   return code === 6 || code === 'already-exists';
+}
+
+function isRiskThresholds(value: unknown): value is RiskThresholds {
+  if (!value || typeof value !== 'object') return false;
+  const thresholds = value as Partial<RiskThresholds>;
+  return (
+    typeof thresholds.cautionPercent === 'number' &&
+    Number.isFinite(thresholds.cautionPercent) &&
+    thresholds.cautionPercent > 0 &&
+    typeof thresholds.criticalPercent === 'number' &&
+    Number.isFinite(thresholds.criticalPercent) &&
+    thresholds.criticalPercent > thresholds.cautionPercent &&
+    typeof thresholds.breachedPercent === 'number' &&
+    Number.isFinite(thresholds.breachedPercent) &&
+    thresholds.breachedPercent > thresholds.criticalPercent &&
+    thresholds.breachedPercent < 100
+  );
 }
 
 function strategyDocumentId(ownerUid: string, symbol: SupportedSymbol): string {
