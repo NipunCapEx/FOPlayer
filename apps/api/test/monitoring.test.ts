@@ -76,6 +76,10 @@ function createHarness(price = 1000, previousClose = 1000) {
       pending.delete(key);
       delivered.add(key);
     }),
+    markAlertSuppressed: vi.fn(async (key) => {
+      pending.delete(key);
+      delivered.add(key);
+    }),
     recordAlertDeliveryFailure: vi.fn(async (key, reason) => {
       deliveryFailures.push({ key, reason });
     }),
@@ -202,6 +206,18 @@ describe('Snapshot validation rejects stale and invalid market data', () => {
   });
 });
 describe('RiskMonitor — business outcomes', () => {
+  it('records but does not dispatch alerts for muted strategies', async () => {
+    const harness = createHarness(1100);
+    vi.mocked(harness.repository.listActiveStrategies).mockResolvedValue([
+      { ...strategy, notificationsEnabled: false },
+    ]);
+    await harness.monitor.runOnce();
+
+    expect(harness.alerts.some((alert) => alert.kind === 'critical')).toBe(true);
+    expect(harness.dispatcher.dispatch).not.toHaveBeenCalled();
+    expect(harness.repository.markAlertSuppressed).toHaveBeenCalled();
+  });
+
   it('emits caution, then critical, but not duplicates on repeated polling', async () => {
     const harness = createHarness(1080);
     await harness.monitor.runOnce();
