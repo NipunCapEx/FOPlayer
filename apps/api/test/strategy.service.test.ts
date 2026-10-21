@@ -24,9 +24,7 @@ function createService() {
       symbol: 'RELIANCE' as const,
       entryPrice: input.entryPrice ?? 100,
       active: input.active ?? true,
-      ...(input.entryDate !== undefined
-        ? { entryDate: input.entryDate }
-        : {}),
+      ...(input.entryDate !== undefined ? { entryDate: input.entryDate } : {}),
       ...(input.expiryDate !== undefined
         ? { expiryDate: input.expiryDate }
         : {}),
