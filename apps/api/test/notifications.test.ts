@@ -331,6 +331,24 @@ describe('FcmTransport', () => {
     expect(deactivateDeviceToken).toHaveBeenCalledWith('stale-device');
   });
 
+  it('does not retire tokens for an unclassified HTTP 404 response', async () => {
+    const sendMessage = vi.fn(async () => {
+      throw new FcmDeliveryError('FCM delivery failed with HTTP 404', 404);
+    });
+    const deactivateDeviceToken = vi.fn(async (_token: string) => {});
+    const transport = new FcmTransport(
+      { sendMessage },
+      async () => ['device-token'],
+      undefined,
+      deactivateDeviceToken,
+    );
+
+    await expect(transport.send(alert)).rejects.toThrow(
+      'FCM delivery failed for one or more registered devices',
+    );
+    expect(deactivateDeviceToken).not.toHaveBeenCalled();
+  });
+
   it('does not treat a payload or server error as an invalid token', async () => {
     const sendMessage = vi.fn(async () => {
       throw new FcmDeliveryError('FCM delivery failed with HTTP 400', 400, 'INVALID_ARGUMENT');
