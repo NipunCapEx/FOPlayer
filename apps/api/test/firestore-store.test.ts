@@ -738,12 +738,11 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
     const alertId = createHash('sha256')
       .update(alert.idempotencyKey)
       .digest('hex');
-    await expect(db.collection('alerts').doc(alertId).get()).resolves.toMatchObject({
-      exists: true,
-      data: expect.objectContaining({
-        status: 'suppressed',
-        suppressionReason: 'strategy_notifications_disabled',
-      }),
+    expect(
+      (await db.collection('alerts').doc(alertId).get()).data(),
+    ).toMatchObject({
+      status: 'suppressed',
+      suppressionReason: 'strategy_notifications_disabled',
     });
   });
 
