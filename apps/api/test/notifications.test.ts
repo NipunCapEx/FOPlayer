@@ -317,7 +317,11 @@ describe('FcmTransport', () => {
   it('keeps transient FCM failures retryable after retiring invalid tokens', async () => {
     const sendMessage = vi.fn(async (input: { token: string }) => {
       if (input.token === 'stale-device') {
-        throw new FcmDeliveryError('FCM delivery failed with HTTP 404', 404, 'UNREGISTERED');
+        throw new FcmDeliveryError(
+          'FCM delivery failed with HTTP 404',
+          404,
+          'UNREGISTERED',
+        );
       }
       throw new Error('temporary network failure');
     });
