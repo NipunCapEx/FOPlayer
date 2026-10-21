@@ -46,7 +46,9 @@ describe('StrategyService', () => {
       service.create('owner-1', {
         symbol: 'RELIANCE',
         entryPrice: 1250,
-        expiryDate: '2026-10-29',
+        entryDate: '2026-10-15',
+        entryDate: '2026-10-15',
+      expiryDate: '2026-10-29',
       }),
     ).resolves.toMatchObject({
       ownerUid: 'owner-1',
@@ -62,6 +64,13 @@ describe('StrategyService', () => {
       expiryDate: '2026-10-29',
     });
 
+    await expect(
+      service.create('owner-1', {
+        symbol: 'RELIANCE',
+        entryPrice: 100,
+        entryDate: 'not-a-date',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.create('owner-1', { symbol: 'UNKNOWN', entryPrice: 100 }),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -85,7 +94,9 @@ describe('StrategyService', () => {
       service.update('owner-1', 'strategy-1', {
         entryPrice: 1500,
         active: false,
-        expiryDate: '2026-11-26',
+        entryDate: '2026-10-15',
+        entryDate: '2026-10-15',
+      expiryDate: '2026-11-26',
       }),
     ).resolves.toMatchObject({
       entryPrice: 1500,
@@ -94,6 +105,9 @@ describe('StrategyService', () => {
     });
     await expect(
       service.update('owner-1', 'strategy-1', { entryPrice: 0 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.update('owner-1', 'strategy-1', { entryDate: 'tomorrow' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update('owner-1', 'strategy-1', { expiryDate: 'tomorrow' }),
