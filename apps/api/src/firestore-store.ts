@@ -569,9 +569,9 @@ function isAlreadyExists(error: unknown): boolean {
   return code === 6 || code === 'already-exists';
 }
 
-function optionalThresholds(
-  thresholds?: RiskThresholds,
-): { thresholds?: RiskThresholds } {
+function optionalThresholds(thresholds?: RiskThresholds): {
+  thresholds?: RiskThresholds;
+} {
   return thresholds === undefined ? {} : { thresholds };
 }
 
