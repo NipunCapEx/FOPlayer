@@ -351,6 +351,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late List<Instrument> instruments;
+  late List<Instrument> _defaultWatchlistTemplates;
+  bool _hasLoadedPersistedWatchlist = false;
   bool _dashboardLoading = false;
   String? _dashboardError;
   Timer? _freshnessTimer;
@@ -361,7 +363,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     // Explicitly labelled fixtures are used only in prototype mode.
     final now = DateTime(2026, 10, 20, 11, 0);
-    instruments = [
+    _defaultWatchlistTemplates = [
       Instrument(
         symbol: 'RELIANCE',
         name: 'Reliance Industries',
@@ -392,10 +394,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         isStale: true,
       ),
     ];
+    instruments = widget.apiClient == null
+        ? List<Instrument>.of(_defaultWatchlistTemplates)
+        : <Instrument>[];
     if (widget.apiClient != null) {
-      instruments = instruments
-          .map((item) => item.copyWith(isStale: true, hasSpotPrice: false))
-          .toList();
       _freshnessTimer = Timer.periodic(
         const Duration(minutes: 1),
         (_) => _refreshSnapshotFreshness(),
@@ -443,7 +445,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       var dashboard = await apiClient.getDashboard();
       if (!dashboard.hasAnyStrategies) {
-        for (final item in List<Instrument>.of(instruments)) {
+        for (final item in List<Instrument>.of(_defaultWatchlistTemplates)) {
           await apiClient.createStrategy(
             symbol: item.symbol,
             entryPrice: item.entryPrice,
@@ -455,7 +457,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         dashboard = await apiClient.getDashboard();
       }
       if (!mounted) return;
-      final fixtures = {for (final item in instruments) item.symbol: item};
+      final fixtures = {
+        for (final item in _defaultWatchlistTemplates) item.symbol: item,
+      };
       final now = DateTime.now();
       setState(() {
         _strategyIds
@@ -486,6 +490,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             fetchedAt: snapshot?.fetchedAt,
           );
         }).toList();
+        _hasLoadedPersistedWatchlist = true;
         _dashboardLoading = false;
       });
     } catch (error) {
@@ -493,8 +498,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _dashboardLoading = false;
         _dashboardError = error.toString();
-        instruments =
-            instruments.map((item) => item.copyWith(isStale: true)).toList();
+        if (_hasLoadedPersistedWatchlist) {
+          instruments =
+              instruments.map((item) => item.copyWith(isStale: true)).toList();
+        } else {
+          // Never present local prototype fixtures as the signed-in user's data.
+          instruments = [];
+          _strategyIds.clear();
+        }
       });
     }
   }
@@ -902,7 +913,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (instruments.isEmpty)
+                if (instruments.isEmpty &&
+                    !_dashboardLoading &&
+                    _dashboardError == null)
                   const Card(
                     child: Padding(
                       padding: EdgeInsets.all(20),
