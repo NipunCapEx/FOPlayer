@@ -34,6 +34,99 @@ void main() {
     expect(find.text('2026-10-20 12:30'), findsOneWidget);
   });
 
+  testWidgets('filters alerts by symbol and delivery status', (tester) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    UserAlert makeAlert({
+      required String id,
+      required String symbol,
+      required String kind,
+      required String status,
+    }) =>
+        UserAlert(
+          id: id,
+          symbol: symbol,
+          kind: kind,
+          message: '$symbol $kind alert',
+          price: 1000,
+          movementPercent: 8,
+          createdAt: DateTime(2026, 10, 20, 12),
+          status: status,
+        );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AlertHistoryScreen(
+          loadAlerts: () async => [
+            makeAlert(
+              id: '1',
+              symbol: 'RELIANCE',
+              kind: 'critical',
+              status: 'delivered',
+            ),
+            makeAlert(
+              id: '2',
+              symbol: 'SBICARD',
+              kind: 'caution',
+              status: 'suppressed',
+            ),
+            makeAlert(
+              id: '3',
+              symbol: 'BHARTIARTL',
+              kind: 'breached',
+              status: 'pending',
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('RELIANCE · CRITICAL'), findsOneWidget);
+    expect(find.text('SBICARD · CAUTION'), findsOneWidget);
+    expect(find.text('BHARTIARTL · BREACHED'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('alert-symbol-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SBICARD').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('SBICARD · CAUTION'), findsOneWidget);
+    expect(find.text('RELIANCE · CRITICAL'), findsNothing);
+    expect(find.text('BHARTIARTL · BREACHED'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('alert-kind-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CAUTION').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('alert-status-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SUPPRESSED').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.notifications_off_outlined), findsOneWidget);
+    expect(find.text('SUPPRESSED'), findsNWidgets(2));
+
+    await tester.tap(find.byKey(const Key('clear-alert-filters-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('RELIANCE · CRITICAL'), findsOneWidget);
+    expect(find.text('BHARTIARTL · BREACHED'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('alert-symbol-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('RELIANCE').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('alert-status-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SUPPRESSED').last);
+    await tester.pumpAndSettle();
+    expect(find.text('No alerts match these filters.'), findsOneWidget);
+  });
+
   testWidgets('shows an empty state when no alerts exist', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

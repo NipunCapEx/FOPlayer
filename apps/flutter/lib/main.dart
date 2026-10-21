@@ -366,6 +366,33 @@ List<Instrument> defaultWatchlistItemsToSeed(
       .toList();
 }
 
+Instrument mapUserStrategyToInstrument(
+  UserStrategy strategy,
+  DashboardSnapshot? snapshot, {
+  required DateTime now,
+  String? name,
+}) {
+  final hasSnapshot = snapshot != null;
+  final fresh = snapshot?.isFreshAt(now) ?? false;
+  return Instrument(
+    symbol: strategy.symbol,
+    name: name ?? strategy.symbol,
+    entryPrice: strategy.entryPrice,
+    entryDate: strategy.entryDate,
+    expiryDate: strategy.expiryDate,
+    thresholds: strategy.thresholds,
+    notificationsEnabled: strategy.notificationsEnabled,
+    spotPrice: snapshot?.spotPrice ?? strategy.entryPrice,
+    lastUpdated:
+        snapshot?.exchangeTimestamp ?? DateTime.fromMillisecondsSinceEpoch(0),
+    isStale: !fresh,
+    hasSpotPrice: hasSnapshot,
+    historicalCloses: snapshot?.historicalCloses ?? const [],
+    dataSource: snapshot?.source,
+    fetchedAt: snapshot?.fetchedAt,
+  );
+}
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, this.onSignOut, this.apiClient});
 
@@ -511,29 +538,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ..addEntries(dashboard.strategies.map(
             (item) => MapEntry(item.symbol, item.id),
           ));
-        instruments = dashboard.strategies.map((item) {
-          final fixture = fixtures[item.symbol];
-          final snapshot = dashboard.snapshots[item.id];
-          final hasSnapshot = snapshot != null;
-          final fresh = snapshot?.isFreshAt(now) ?? false;
-          return Instrument(
-            symbol: item.symbol,
-            name:
-                fixture?.name ?? _supportedSymbols[item.symbol] ?? item.symbol,
-            entryPrice: item.entryPrice,
-            entryDate: item.entryDate,
-            expiryDate: item.expiryDate,
-            thresholds: item.thresholds,
-            spotPrice: snapshot?.spotPrice ?? item.entryPrice,
-            lastUpdated: snapshot?.exchangeTimestamp ??
-                DateTime.fromMillisecondsSinceEpoch(0),
-            isStale: !fresh,
-            hasSpotPrice: hasSnapshot,
-            historicalCloses: snapshot?.historicalCloses ?? const [],
-            dataSource: snapshot?.source,
-            fetchedAt: snapshot?.fetchedAt,
-          );
-        }).toList();
+        instruments = dashboard.strategies
+            .map((item) => mapUserStrategyToInstrument(
+                  item,
+                  dashboard.snapshots[item.id],
+                  now: now,
+                  name: fixtures[item.symbol]?.name ??
+                      _supportedSymbols[item.symbol] ??
+                      item.symbol,
+                ))
+            .toList();
         _hasLoadedPersistedWatchlist = true;
         _dashboardLoading = false;
       });
