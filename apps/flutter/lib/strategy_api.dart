@@ -51,6 +51,7 @@ class UserStrategy {
     this.entryDate,
     this.expiryDate,
     this.thresholds = const StrategyThresholds(),
+    this.notificationsEnabled = true,
   });
 
   final String id;
@@ -60,6 +61,7 @@ class UserStrategy {
   final DateTime? entryDate;
   final DateTime? expiryDate;
   final StrategyThresholds thresholds;
+  final bool notificationsEnabled;
 
   factory UserStrategy.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
@@ -87,6 +89,9 @@ class UserStrategy {
       thresholds: parsedThresholds.isValid
           ? parsedThresholds
           : const StrategyThresholds(),
+      notificationsEnabled: json['notificationsEnabled'] is bool
+          ? json['notificationsEnabled'] as bool
+          : true,
     );
   }
 }
@@ -365,6 +370,7 @@ class StrategyApiClient {
     DateTime? entryDate,
     DateTime? expiryDate,
     StrategyThresholds? thresholds,
+    bool? notificationsEnabled,
   }) async {
     final response = await _request(
       'POST',
@@ -375,6 +381,8 @@ class StrategyApiClient {
         if (entryDate != null) 'entryDate': _formatDateOnly(entryDate),
         if (expiryDate != null) 'expiryDate': _formatDateOnly(expiryDate),
         if (thresholds != null) 'thresholds': thresholds.toJson(),
+        if (notificationsEnabled != null)
+          'notificationsEnabled': notificationsEnabled,
       },
     );
     if (response is! Map<String, dynamic>) {
@@ -390,6 +398,7 @@ class StrategyApiClient {
     DateTime? entryDate,
     DateTime? expiryDate,
     StrategyThresholds? thresholds,
+    bool? notificationsEnabled,
   }) async {
     final body = <String, dynamic>{};
     if (entryPrice != null) body['entryPrice'] = entryPrice;
@@ -397,6 +406,9 @@ class StrategyApiClient {
     if (entryDate != null) body['entryDate'] = _formatDateOnly(entryDate);
     if (expiryDate != null) body['expiryDate'] = _formatDateOnly(expiryDate);
     if (thresholds != null) body['thresholds'] = thresholds.toJson();
+    if (notificationsEnabled != null) {
+      body['notificationsEnabled'] = notificationsEnabled;
+    }
     final response = await _request(
       'PATCH',
       '/api/strategies/${Uri.encodeComponent(id)}',
