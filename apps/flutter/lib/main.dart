@@ -51,7 +51,9 @@ class Instrument {
   bool get isExpired {
     final expiry = expiryDate;
     return expiry != null &&
-        DateUtils.dateOnly(expiry).isBefore(DateUtils.dateOnly(DateTime.now()));
+        DateUtils.dateOnly(expiry).isBefore(
+          DateUtils.dateOnly(DateTime.now()),
+        );
   }
 
   bool get isCurrentlyStale {
