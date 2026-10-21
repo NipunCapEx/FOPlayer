@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { FirebaseAdminService } from './firebase-admin.service.js';
+import { marketHoursPolicyFromEnvironment } from './monitoring.js';
 
 @Controller()
 export class HealthController {
@@ -11,6 +12,8 @@ export class HealthController {
       status: 'ok',
       service: 'foplayer-api',
       firebaseConfigured: this.firebase?.isConfigured ?? false,
+      marketHoursConfigurationValid:
+        marketHoursPolicyFromEnvironment() !== null,
       marketDataAdapter: 'yahoo-finance-prototype',
       telegramConfigured: Boolean(
         process.env.TELEGRAM_BOT_TOKEN &&
