@@ -1201,12 +1201,12 @@ class InstrumentCard extends StatelessWidget {
         ? 'EXPIRED'
         : instrument.isCurrentlyStale
             ? 'DATA STALE'
-        : switch (level) {
-            RiskLevel.normal => 'NORMAL',
-            RiskLevel.caution => 'CAUTION',
-            RiskLevel.critical => 'CRITICAL',
-            RiskLevel.breached => 'BREACHED',
-          };
+            : switch (level) {
+                RiskLevel.normal => 'NORMAL',
+                RiskLevel.caution => 'CAUTION',
+                RiskLevel.critical => 'CRITICAL',
+                RiskLevel.breached => 'BREACHED',
+              };
     final color = instrument.isCurrentlyStale
         ? Colors.blueGrey
         : switch (level) {
@@ -1327,10 +1327,10 @@ class InstrumentCard extends StatelessWidget {
                 instrument.isExpired
                     ? 'Strategy expired. No actionable risk state is shown.'
                     : isDemo
-                    ? 'Snapshot is stale. No actionable risk state is shown.'
-                    : instrument.hasSpotPrice
-                        ? 'Snapshot is stale. Last observed at $snapshotTime from ${instrument.dataSource ?? 'unknown'}. No actionable risk state is shown.'
-                        : 'No validated market snapshot is available. No actionable risk state is shown.',
+                        ? 'Snapshot is stale. No actionable risk state is shown.'
+                        : instrument.hasSpotPrice
+                            ? 'Snapshot is stale. Last observed at $snapshotTime from ${instrument.dataSource ?? 'unknown'}. No actionable risk state is shown.'
+                            : 'No validated market snapshot is available. No actionable risk state is shown.',
                 key: const Key('stale-message'),
               )
             else
