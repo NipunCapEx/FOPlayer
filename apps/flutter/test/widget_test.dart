@@ -46,6 +46,28 @@ void main() {
     expect(find.textContaining('google-services.json'), findsOneWidget);
   });
 
+  test('only active strategies are shown on the dashboard', () {
+    final strategies = [
+      const UserStrategy(
+        id: 'active',
+        symbol: 'RELIANCE',
+        entryPrice: 1000,
+        active: true,
+      ),
+      const UserStrategy(
+        id: 'inactive',
+        symbol: 'SBICARD',
+        entryPrice: 800,
+        active: false,
+      ),
+    ];
+
+    expect(
+      activeStrategiesForDashboard(strategies).map((strategy) => strategy.id),
+      ['active'],
+    );
+  });
+
   group('default watchlist seeding', () {
     final templates = [
       for (final symbol in ['RELIANCE', 'JSWSTEEL', 'BHARTIARTL', 'SBICARD'])
