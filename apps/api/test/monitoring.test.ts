@@ -213,7 +213,9 @@ describe('RiskMonitor — business outcomes', () => {
     ]);
     await harness.monitor.runOnce();
 
-    expect(harness.alerts.some((alert) => alert.kind === 'critical')).toBe(true);
+    expect(harness.alerts.some((alert) => alert.kind === 'critical')).toBe(
+      true,
+    );
     expect(harness.dispatcher.dispatch).not.toHaveBeenCalled();
     expect(harness.repository.markAlertSuppressed).toHaveBeenCalled();
   });
