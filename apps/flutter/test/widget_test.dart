@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foplayer/main.dart';
@@ -22,6 +23,30 @@ void main() {
   });
 
   group('FOPlayer dashboard business outcomes', () {
+    testWidgets('does not show prototype fixtures when authenticated data fails',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DashboardScreen(
+            apiClient: StrategyApiClient(
+              auth: _UnusedFirebaseAuth(),
+              baseUrl: 'http://invalid.example',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dashboard data unavailable'), findsOneWidget);
+      expect(find.byKey(const Key('retry-dashboard-button')), findsOneWidget);
+      expect(find.text('RELIANCE'), findsNothing);
+      expect(find.text('Demo spot'), findsNothing);
+      expect(
+        find.text('Your watchlist is empty. Add a symbol to get started.'),
+        findsNothing,
+      );
+    });
+
     testWidgets('shows all four configured instruments and demo-data warning',
         (tester) async {
       await tester.pumpWidget(const FOPlayerApp(prototypeMode: true));
@@ -417,3 +442,8 @@ void main() {
 }
 
 void _noop() {}
+
+class _UnusedFirebaseAuth implements FirebaseAuth {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
