@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { StrategyService } from '../src/strategy.service.js';
 import type { FirestoreStrategyStore } from '../src/firestore-store.js';
