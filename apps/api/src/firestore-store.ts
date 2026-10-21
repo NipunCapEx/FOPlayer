@@ -99,9 +99,7 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined
-          ? { thresholds: input.thresholds }
-          : {}),
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -114,9 +112,7 @@ export class FirestoreStrategyStore {
         ...current,
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined
-          ? { thresholds: input.thresholds }
-          : {}),
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -165,9 +161,7 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined
-          ? { thresholds: input.thresholds }
-          : {}),
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -180,9 +174,7 @@ export class FirestoreStrategyStore {
         ...raced,
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined
-          ? { thresholds: input.thresholds }
-          : {}),
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -353,9 +345,7 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
         ...(record.expiryDate !== undefined
           ? { expiryDate: record.expiryDate }
           : {}),
-        ...(record.thresholds !== undefined
-          ? { thresholds: record.thresholds }
-          : {}),
+        ...(record.thresholds !== undefined ? { thresholds: record.thresholds } : {}),
       });
     }
     return strategies;
@@ -548,9 +538,7 @@ function toStrategyRecord(doc: DocumentSnapshotPort): StrategyRecord | null {
     ...(typeof data.expiryDate === 'string'
       ? { expiryDate: data.expiryDate }
       : {}),
-    ...(isRiskThresholds(data.thresholds)
-      ? { thresholds: data.thresholds }
-      : {}),
+    ...(isRiskThresholds(data.thresholds) ? { thresholds: data.thresholds } : {}),
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
