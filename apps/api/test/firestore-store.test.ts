@@ -232,6 +232,52 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     ).resolves.toMatchObject({ entryPrice: 1200, active: false });
   });
 
+  it('enforces one active strategy per owner and symbol across concurrent creates', async () => {
+    const { strategies } = createStores();
+    const results = await Promise.allSettled([
+      strategies.createForOwner('owner-a', {
+        symbol: 'RELIANCE',
+        entryPrice: 1000,
+        active: true,
+      }),
+      strategies.createForOwner('owner-a', {
+        symbol: 'RELIANCE',
+        entryPrice: 1100,
+        active: true,
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(
+      (await strategies.listForOwner('owner-a')).filter((item) => item.active),
+    ).toHaveLength(1);
+  });
+
+  it('reactivates an inactive strategy without discarding its history identity', async () => {
+    const { strategies } = createStores();
+    const original = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    await strategies.updateForOwner('owner-a', original.id, { active: false });
+
+    const reactivated = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1200,
+      active: true,
+    });
+
+    expect(reactivated.id).toBe(original.id);
+    expect(reactivated).toMatchObject({
+      entryPrice: 1200,
+      active: true,
+      ownerUid: 'owner-a',
+    });
+    expect(await strategies.listForOwner('owner-a')).toHaveLength(1);
+  });
+
   it('filters malformed strategy documents', async () => {
     const { db, strategies } = createStores();
     await db.collection('strategies').doc('bad-symbol').set({
