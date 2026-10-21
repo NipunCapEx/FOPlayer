@@ -46,6 +46,7 @@ export interface DashboardSnapshot {
   exchangeTimestamp: Date;
   fetchedAt: Date;
   recordedAt: Date;
+  historicalCloses: number[];
 }
 
 @Injectable()
@@ -237,6 +238,16 @@ export class FirestoreStrategyStore {
             exchangeTimestamp: toDate(data.exchangeTimestamp),
             fetchedAt: toDate(data.fetchedAt),
             recordedAt: toDate(data.recordedAt),
+            historicalCloses: Array.isArray(data.historicalCloses)
+              ? data.historicalCloses
+                  .filter(
+                    (value): value is number =>
+                      typeof value === 'number' &&
+                      Number.isFinite(value) &&
+                      value > 0,
+                  )
+                  .slice(-30)
+              : [],
           };
         }),
       )
@@ -341,6 +352,7 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
       exchangeTimestamp: snapshot.exchangeTimestamp,
       fetchedAt: snapshot.fetchedAt,
       recordedAt: new Date(),
+      historicalCloses: snapshot.historicalCloses.slice(-30),
     });
   }
 
