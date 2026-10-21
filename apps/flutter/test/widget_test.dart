@@ -282,7 +282,7 @@ void main() {
                 lastUpdated: DateTime(2026, 10, 20),
                 entryDate: DateTime(2026, 10, 15),
                 expiryDate: DateTime(2026, 11, 26),
-                thresholds: StrategyThresholds(
+                thresholds: const StrategyThresholds(
                   cautionPercent: 5,
                   criticalPercent: 7,
                   breachedPercent: 9,
