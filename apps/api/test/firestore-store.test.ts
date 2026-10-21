@@ -211,6 +211,11 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       active: true,
       entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
+      thresholds: {
+        cautionPercent: 6,
+        criticalPercent: 8,
+        breachedPercent: 10,
+      },
     });
     await strategies.createForOwner('owner-b', {
       symbol: 'SBICARD',
@@ -269,6 +274,11 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       active: true,
       entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
+      thresholds: {
+        cautionPercent: 5,
+        criticalPercent: 7,
+        breachedPercent: 9,
+      },
     });
     await strategies.updateForOwner('owner-a', original.id, { active: false });
 
@@ -286,6 +296,11 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       active: true,
       entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
+      thresholds: {
+        cautionPercent: 6,
+        criticalPercent: 8,
+        breachedPercent: 10,
+      },
       ownerUid: 'owner-a',
     });
     await expect(strategies.listForOwner('owner-a')).resolves.toMatchObject([
