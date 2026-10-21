@@ -421,6 +421,34 @@ describe('Indian equity market schedule', () => {
     ).toBe(false);
   });
 
+  it('loads comma-separated exchange holidays from server configuration', () => {
+    vi.stubEnv('FOPLAYER_MARKET_HOLIDAYS', '2026-10-20, 2026-10-21');
+    try {
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-10-20T04:00:00.000Z')),
+      ).toBe(false);
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-10-21T04:00:00.000Z')),
+      ).toBe(false);
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-10-22T04:00:00.000Z')),
+      ).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('fails closed when the configured holiday list contains an invalid date', () => {
+    vi.stubEnv('FOPLAYER_MARKET_HOLIDAYS', '2026-10-20,2026-02-30');
+    try {
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-10-22T04:00:00.000Z')),
+      ).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('supports a special session outside normal hours, including weekends', () => {
     expect(
       isIndianEquityMarketOpen(new Date('2026-10-24T12:30:00.000Z'), {
