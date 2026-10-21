@@ -98,6 +98,11 @@ void main() {
     expect(find.text('RELIANCE · CRITICAL'), findsNothing);
     expect(find.text('BHARTIARTL · BREACHED'), findsNothing);
 
+    await tester.tap(find.byKey(const Key('alert-kind-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CAUTION').last);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('alert-status-filter')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('SUPPRESSED').last);
@@ -110,6 +115,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('RELIANCE · CRITICAL'), findsOneWidget);
     expect(find.text('BHARTIARTL · BREACHED'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('alert-symbol-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('RELIANCE').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('alert-status-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SUPPRESSED').last);
+    await tester.pumpAndSettle();
+    expect(find.text('No alerts match these filters.'), findsOneWidget);
   });
 
   testWidgets('shows an empty state when no alerts exist', (tester) async {
