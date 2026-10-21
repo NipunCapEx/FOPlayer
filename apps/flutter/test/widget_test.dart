@@ -359,6 +359,36 @@ void main() {
       expect(find.text('Movement unavailable'), findsOneWidget);
     });
 
+    testWidgets('exposes the per-strategy notification mute control',
+        (tester) async {
+      var enabled = true;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: InstrumentCard(
+              instrument: Instrument(
+                symbol: 'RELIANCE',
+                name: 'Reliance Industries',
+                entryPrice: 1000,
+                spotPrice: 1000,
+                lastUpdated: DateTime.now(),
+              ),
+              onEditEntry: () {},
+              onNotificationsChanged: (value) => enabled = value,
+              isDemo: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Risk notifications'), findsOneWidget);
+      expect(find.text('Alerts are sent for this strategy'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('notifications-RELIANCE')));
+      await tester.pump();
+
+      expect(enabled, isFalse);
+    });
+
     testWidgets('validates and saves custom risk thresholds', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
