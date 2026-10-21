@@ -474,7 +474,7 @@ function isAlreadyExists(error: unknown): boolean {
 function strategyDocumentId(ownerUid: string, symbol: SupportedSymbol): string {
   return createHash('sha256')
     .update(ownerUid)
-    .update('\\0')
+    .update('\0')
     .update(symbol)
     .digest('hex');
 }
