@@ -346,6 +346,10 @@ class ApiSetupScreen extends StatelessWidget {
   }
 }
 
+List<UserStrategy> activeStrategiesForDashboard(
+  List<UserStrategy> strategies,
+) => strategies.where((strategy) => strategy.active).toList();
+
 List<Instrument> defaultWatchlistItemsToSeed(
   List<Instrument> templates,
   List<UserStrategy> existingStrategies,
@@ -529,7 +533,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     try {
       var dashboard = await apiClient.getDashboard();
-      final existingStrategies = await apiClient.listStrategies();
+      final existingStrategies =
+          await apiClient.listStrategies(includeInactive: true);
       final missingDefaults = defaultWatchlistItemsToSeed(
         _defaultWatchlistTemplates,
         existingStrategies,
@@ -548,7 +553,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // A concurrent client or a timed-out response may have saved the
           // strategy already. Only suppress the error when the server confirms
           // that this symbol now exists; otherwise keep the retryable error.
-          final latestStrategies = await apiClient.listStrategies();
+          final latestStrategies =
+              await apiClient.listStrategies(includeInactive: true);
           if (!latestStrategies
               .any((strategy) => strategy.symbol == item.symbol)) {
             rethrow;
@@ -563,13 +569,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         for (final item in _defaultWatchlistTemplates) item.symbol: item,
       };
       final now = DateTime.now();
+      final activeStrategies =
+          activeStrategiesForDashboard(dashboard.strategies);
       setState(() {
         _strategyIds
           ..clear()
-          ..addEntries(dashboard.strategies.map(
+          ..addEntries(activeStrategies.map(
             (item) => MapEntry(item.symbol, item.id),
           ));
-        instruments = dashboard.strategies
+        instruments = activeStrategies
             .map((item) => mapUserStrategyToInstrument(
                   item,
                   dashboard.snapshots[item.id],
@@ -585,7 +593,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final notificationRegistration = _notificationRegistration;
       if (notificationRegistration != null) {
         unawaited(
-            notificationRegistration.syncStrategies(dashboard.strategies));
+            notificationRegistration.syncStrategies(activeStrategies));
       }
     } catch (error) {
       if (!mounted) return;
