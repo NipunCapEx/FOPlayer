@@ -209,6 +209,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       symbol: 'RELIANCE',
       entryPrice: 1000,
       active: true,
+      expiryDate: '2026-11-26',
     });
     await strategies.createForOwner('owner-b', {
       symbol: 'SBICARD',
@@ -525,7 +526,11 @@ describe('FirestoreMonitoringRepository — assessment and outbox', () => {
     });
 
     expect(await monitoring.listActiveStrategies()).toEqual([
-      expect.objectContaining({ id: valid.id, ownerUid: 'owner-a' }),
+      expect.objectContaining({
+        id: valid.id,
+        ownerUid: 'owner-a',
+        expiryDate: '2026-11-26',
+      }),
     ]);
   });
 
