@@ -529,7 +529,7 @@ export class FirestoreMonitoringRepository
         ...(typeof data.notificationsEnabled === 'boolean'
           ? { notificationsEnabled: data.notificationsEnabled }
           : {}),
-        ...(typeof data.ownerUid === 'string
+        ...(typeof data.ownerUid === 'string'
           ? { ownerUid: data.ownerUid }
           : {}),
       }));
