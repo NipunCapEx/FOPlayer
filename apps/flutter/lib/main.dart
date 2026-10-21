@@ -77,8 +77,10 @@ class Instrument {
         exchangeAge < -maxFutureSkew;
   }
 
-  double get lowerBoundary => entryPrice * (1 - thresholds.breachedPercent / 100);
-  double get upperBoundary => entryPrice * (1 + thresholds.breachedPercent / 100);
+  double get lowerBoundary =>
+      entryPrice * (1 - thresholds.breachedPercent / 100);
+  double get upperBoundary =>
+      entryPrice * (1 + thresholds.breachedPercent / 100);
   double get movementPercent => (spotPrice - entryPrice) / entryPrice * 100;
 
   RiskLevel get riskLevel {
@@ -941,7 +943,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Risk thresholds',
+                  'Default risk levels (customizable per strategy)',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
@@ -1586,7 +1588,11 @@ class InstrumentCard extends StatelessWidget {
               child: Row(
                 children: [
                   const Expanded(child: Text('Risk thresholds')),
-                  Text('${instrument.thresholds.cautionPercent}% / ${instrument.thresholds.criticalPercent}% / ${instrument.thresholds.breachedPercent}%'),
+                  Text(
+                    '${instrument.thresholds.cautionPercent}% / '
+                    '${instrument.thresholds.criticalPercent}% / '
+                    '${instrument.thresholds.breachedPercent}%',
+                  ),
                 ],
               ),
             ),
