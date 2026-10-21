@@ -455,12 +455,12 @@ describe('Indian equity market schedule', () => {
       '{"2026-10-24":{"open":"18:00","close":"19:00"}}',
     );
     try {
-      expect(isIndianEquityMarketOpen(new Date('2026-10-24T12:30:00.000Z'))).toBe(
-        true,
-      );
-      expect(isIndianEquityMarketOpen(new Date('2026-10-24T12:00:00.000Z'))).toBe(
-        false,
-      );
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-10-24T12:30:00.000Z')),
+      ).toBe(true);
+      expect(
+        isIndianEquityMarketOpen(new Date('2026-10-24T12:00:00.000Z')),
+      ).toBe(false);
     } finally {
       vi.unstubAllEnvs();
     }
