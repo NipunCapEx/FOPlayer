@@ -75,10 +75,8 @@ export function assessRisk(input: RiskInput): RiskAssessment {
       'thresholds must increase and breachedPercent must be below 100',
     );
   }
-  const lowerBoundary =
-    entryPrice * (1 - thresholds.breachedPercent / 100);
-  const upperBoundary =
-    entryPrice * (1 + thresholds.breachedPercent / 100);
+  const lowerBoundary = entryPrice * (1 - thresholds.breachedPercent / 100);
+  const upperBoundary = entryPrice * (1 + thresholds.breachedPercent / 100);
   const movementPercent = ((spotPrice - entryPrice) / entryPrice) * 100;
   const lowerBoundaryDistancePercent =
     ((spotPrice - lowerBoundary) / spotPrice) * 100;
