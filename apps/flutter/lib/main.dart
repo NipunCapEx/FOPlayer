@@ -471,7 +471,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               badge: true,
               sound: true,
             );
-            return settings.authorizationStatus == AuthorizationStatus.authorized ||
+            return settings.authorizationStatus ==
+                    AuthorizationStatus.authorized ||
                 settings.authorizationStatus == AuthorizationStatus.provisional;
           },
           getToken: messaging.getToken,
@@ -583,7 +584,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
       final notificationRegistration = _notificationRegistration;
       if (notificationRegistration != null) {
-        unawaited(notificationRegistration.syncStrategies(dashboard.strategies));
+        unawaited(
+            notificationRegistration.syncStrategies(dashboard.strategies));
       }
     } catch (error) {
       if (!mounted) return;
