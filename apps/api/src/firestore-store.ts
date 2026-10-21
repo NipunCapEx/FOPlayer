@@ -348,15 +348,15 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
       .collection('strategySnapshots')
       .doc(strategyId)
       .set({
-      strategyId,
-      ownerUid,
-      assessment,
-      source: snapshot.source,
-      exchangeTimestamp: snapshot.exchangeTimestamp,
-      fetchedAt: snapshot.fetchedAt,
-      recordedAt: new Date(),
-      historicalCloses: snapshot.historicalCloses.slice(-30),
-    });
+        strategyId,
+        ownerUid,
+        assessment,
+        source: snapshot.source,
+        exchangeTimestamp: snapshot.exchangeTimestamp,
+        fetchedAt: snapshot.fetchedAt,
+        recordedAt: new Date(),
+        historicalCloses: snapshot.historicalCloses.slice(-30),
+      });
   }
 
   async getRiskEpisodeState(
