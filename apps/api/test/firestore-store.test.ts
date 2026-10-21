@@ -544,6 +544,34 @@ describe('FirestoreStrategyStore — owner isolation', () => {
 });
 
 describe('FirestoreMonitoringRepository — assessment and outbox', () => {
+  it('ignores malformed saved threshold configurations', async () => {
+    const { db, strategies } = createStores();
+    const invalidThresholds: unknown[] = [
+      null,
+      { cautionPercent: '5', criticalPercent: 7, breachedPercent: 9 },
+      { cautionPercent: Number.NaN, criticalPercent: 7, breachedPercent: 9 },
+      { cautionPercent: 0, criticalPercent: 7, breachedPercent: 9 },
+      { cautionPercent: 10, criticalPercent: 8, breachedPercent: 12 },
+      { cautionPercent: 5, criticalPercent: 8, breachedPercent: 7 },
+      { cautionPercent: 5, criticalPercent: 7, breachedPercent: 100 },
+    ];
+    for (const [index, thresholds] of invalidThresholds.entries()) {
+      await db.collection('strategies').doc(`bad-threshold-${index}`).set({
+        ownerUid: 'owner-a',
+        symbol: 'RELIANCE',
+        entryPrice: 1000,
+        active: false,
+        thresholds,
+        createdAt: new Date('2026-10-01T00:00:00Z'),
+        updatedAt: new Date('2026-10-01T00:00:00Z'),
+      });
+    }
+
+    const records = await strategies.listForOwner('owner-a');
+    expect(records).toHaveLength(invalidThresholds.length);
+    expect(records.every((record) => record.thresholds === undefined)).toBe(true);
+  });
+
   it('lists valid active strategies and retains owner context', async () => {
     const { db, strategies, monitoring } = createStores();
     const valid = await strategies.createForOwner('owner-a', {
