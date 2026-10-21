@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'alert_history.dart';
+import 'notification_registration.dart';
 import 'package:foplayer/strategy_api.dart';
 
 Future<void> main() async {
@@ -411,6 +414,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _dashboardError;
   Timer? _freshnessTimer;
   Timer? _snapshotRefreshTimer;
+  NotificationRegistrationService? _notificationRegistration;
 
   @override
   void initState() {
@@ -452,6 +456,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ? List<Instrument>.of(_defaultWatchlistTemplates)
         : <Instrument>[];
     if (widget.apiClient != null) {
+      if (!kIsWeb) {
+        final messaging = FirebaseMessaging.instance;
+        _notificationRegistration = NotificationRegistrationService(
+          requestPermission: () async {
+            final settings = await messaging.requestPermission(
+              alert: true,
+              badge: true,
+              sound: true,
+            );
+            return settings.authorizationStatus == AuthorizationStatus.authorized ||
+                settings.authorizationStatus == AuthorizationStatus.provisional;
+          },
+          getToken: messaging.getToken,
+          tokenRefresh: FirebaseMessaging.onTokenRefresh,
+          registerDeviceToken: widget.apiClient!.registerDeviceToken,
+          onError: (error) =>
+              debugPrint('FCM device registration failed: $error'),
+        );
+      }
       _freshnessTimer = Timer.periodic(
         const Duration(minutes: 1),
         (_) => _refreshSnapshotFreshness(),
@@ -474,6 +497,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _freshnessTimer?.cancel();
     _snapshotRefreshTimer?.cancel();
+    unawaited(_notificationRegistration?.dispose());
     super.dispose();
   }
 
@@ -551,6 +575,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _hasLoadedPersistedWatchlist = true;
         _dashboardLoading = false;
       });
+      final notificationRegistration = _notificationRegistration;
+      if (notificationRegistration != null) {
+        unawaited(notificationRegistration.syncStrategies(dashboard.strategies));
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
