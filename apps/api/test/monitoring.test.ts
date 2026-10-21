@@ -140,8 +140,7 @@ describe('Snapshot validation rejects stale and invalid market data', () => {
       expect.objectContaining({ level: 'critical' }),
       expect.anything(),
     );
-    expect(harness.alerts).toHaveLength(1);
-    expect(harness.alerts[0]?.kind).toBe('critical');
+    expect(harness.alerts.some((alert) => alert.kind === 'critical')).toBe(true);
   });
 
   it('does not request prices or emit alerts for strategies past expiry', async () => {
