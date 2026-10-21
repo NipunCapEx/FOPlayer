@@ -57,6 +57,7 @@ describe('StrategyService', () => {
           criticalPercent: 7,
           breachedPercent: 9,
         },
+        notificationsEnabled: false,
       }),
     ).resolves.toMatchObject({
       ownerUid: 'owner-1',
@@ -70,6 +71,7 @@ describe('StrategyService', () => {
         criticalPercent: 7,
         breachedPercent: 9,
       },
+      notificationsEnabled: false,
     });
     expect(store.createForOwner).toHaveBeenCalledWith('owner-1', {
       symbol: 'RELIANCE',
@@ -82,8 +84,16 @@ describe('StrategyService', () => {
         criticalPercent: 7,
         breachedPercent: 9,
       },
+      notificationsEnabled: false,
     });
 
+    await expect(
+      service.create('owner-1', {
+        symbol: 'RELIANCE',
+        entryPrice: 100,
+        notificationsEnabled: 'false',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.create('owner-1', {
         symbol: 'RELIANCE',
@@ -162,6 +172,7 @@ describe('StrategyService', () => {
           criticalPercent: 8,
           breachedPercent: 10,
         },
+        notificationsEnabled: false,
       }),
     ).resolves.toMatchObject({
       entryPrice: 1500,
@@ -173,6 +184,7 @@ describe('StrategyService', () => {
         criticalPercent: 8,
         breachedPercent: 10,
       },
+      notificationsEnabled: false,
     });
     await expect(
       service.update('owner-1', 'strategy-1', { entryPrice: 0 }),
@@ -185,6 +197,11 @@ describe('StrategyService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update('owner-1', 'strategy-1', { active: 'false' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.update('owner-1', 'strategy-1', {
+        notificationsEnabled: 'false',
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update('owner-1', 'strategy-1', {}),
