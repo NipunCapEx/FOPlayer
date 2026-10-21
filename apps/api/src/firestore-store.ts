@@ -20,17 +20,20 @@ export interface CreateStrategyInput {
   symbol: SupportedSymbol;
   entryPrice: number;
   active: boolean;
+  entryDate?: string;
   expiryDate?: string;
 }
 
 export interface UpdateStrategyInput {
   entryPrice?: number;
   active?: boolean;
+  entryDate?: string;
   expiryDate?: string;
 }
 
 export interface StrategyRecord extends Strategy {
   ownerUid: string;
+  entryDate?: string;
   expiryDate?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -91,6 +94,9 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.entryDate !== undefined
+          ? { entryDate: input.entryDate }
+          : {}),
         ...(input.expiryDate !== undefined
           ? { expiryDate: input.expiryDate }
           : {}),
@@ -100,6 +106,9 @@ export class FirestoreStrategyStore {
         ...current,
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.entryDate !== undefined
+          ? { entryDate: input.entryDate }
+          : {}),
         ...(input.expiryDate !== undefined
           ? { expiryDate: input.expiryDate }
           : {}),
@@ -114,6 +123,9 @@ export class FirestoreStrategyStore {
       symbol: input.symbol,
       entryPrice: input.entryPrice,
       active: input.active,
+      ...(input.entryDate !== undefined
+        ? { entryDate: input.entryDate }
+        : {}),
       ...(input.expiryDate !== undefined
         ? { expiryDate: input.expiryDate }
         : {}),
@@ -141,6 +153,9 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.entryDate !== undefined
+          ? { entryDate: input.entryDate }
+          : {}),
         ...(input.expiryDate !== undefined
           ? { expiryDate: input.expiryDate }
           : {}),
@@ -150,6 +165,9 @@ export class FirestoreStrategyStore {
         ...raced,
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.entryDate !== undefined
+          ? { entryDate: input.entryDate }
+          : {}),
         ...(input.expiryDate !== undefined
           ? { expiryDate: input.expiryDate }
           : {}),
@@ -193,6 +211,7 @@ export class FirestoreStrategyStore {
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (input.entryPrice !== undefined) patch.entryPrice = input.entryPrice;
     if (input.active !== undefined) patch.active = input.active;
+    if (input.entryDate !== undefined) patch.entryDate = input.entryDate;
     if (input.expiryDate !== undefined) patch.expiryDate = input.expiryDate;
     await reference.update(patch);
     return { ...current, ...input, updatedAt: patch.updatedAt as Date };
@@ -487,6 +506,9 @@ function toStrategyRecord(doc: DocumentSnapshotPort): StrategyRecord | null {
     symbol: data.symbol as SupportedSymbol,
     entryPrice: data.entryPrice,
     active: data.active,
+    ...(typeof data.entryDate === 'string'
+      ? { entryDate: data.entryDate }
+      : {}),
     ...(typeof data.expiryDate === 'string'
       ? { expiryDate: data.expiryDate }
       : {}),
