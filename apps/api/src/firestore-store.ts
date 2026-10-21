@@ -115,7 +115,12 @@ export class FirestoreStrategyStore {
       if (!isAlreadyExists(error)) throw error;
       // Another request won the create race. Never overwrite its active entry.
       const raced = toStrategyRecord(await reference.get());
-      if (!raced || raced.ownerUid !== ownerUid || raced.symbol !== input.symbol || raced.active) {
+      if (
+        !raced ||
+        raced.ownerUid !== ownerUid ||
+        raced.symbol !== input.symbol ||
+        raced.active
+      ) {
         throw new ConflictException(
           'an active strategy already exists for this symbol',
         );
