@@ -48,6 +48,12 @@ export class StrategiesController {
       ...(Object.hasOwn(body, 'thresholds')
         ? { thresholds: body.thresholds }
         : {}),
+      ...(Object.hasOwn(body, 'notificationsEnabled')
+        ? { notificationsEnabled: body.notificationsEnabled }
+        : {}),
+      ...(Object.hasOwn(body, 'notificationsEnabled')
+        ? { notificationsEnabled: body.notificationsEnabled }
+        : {}),
     });
   }
 
