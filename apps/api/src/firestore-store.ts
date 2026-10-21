@@ -313,6 +313,18 @@ export class FirestoreStrategyStore {
     return true;
   }
 
+  async deactivateDeviceToken(token: string): Promise<void> {
+    const id = createHash('sha256').update(token).digest('hex');
+    const reference = this.db.collection('deviceTokens').doc(id);
+    const snapshot = await reference.get();
+    if (!snapshot.exists) return;
+    await reference.update({
+      active: false,
+      deactivatedReason: 'fcm-unregistered',
+      updatedAt: new Date(),
+    });
+  }
+
   async listDeviceTokensForStrategy(strategyId: string): Promise<string[]> {
     const result = await this.db
       .collection('deviceTokens')

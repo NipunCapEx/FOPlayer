@@ -555,6 +555,19 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     await expect(
       strategies.listDeviceTokensForStrategy(strategy.id),
     ).resolves.toEqual(['device-token', 'another-device-token']);
+
+    await strategies.deactivateDeviceToken('missing-token');
+    await strategies.deactivateDeviceToken('device-token');
+    await expect(
+      strategies.listDeviceTokensForStrategy(strategy.id),
+    ).resolves.toEqual(['another-device-token']);
+    const tokenId = createHash('sha256').update('device-token').digest('hex');
+    expect(
+      (await db.collection('deviceTokens').doc(tokenId).get()).data(),
+    ).toMatchObject({
+      active: false,
+      deactivatedReason: 'fcm-unregistered',
+    });
   });
 });
 
