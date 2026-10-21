@@ -97,6 +97,8 @@ describe('StrategyService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     const invalidThresholds = [
       null,
+      'not-an-object',
+      42,
       {},
       { cautionPercent: 0, criticalPercent: 7, breachedPercent: 9 },
       { cautionPercent: 5, criticalPercent: 7, breachedPercent: 100 },
