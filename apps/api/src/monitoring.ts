@@ -68,7 +68,10 @@ export interface MonitoringRepository {
   enqueueAlert(alert: RiskAlert): Promise<void>;
   listPendingAlerts(): Promise<RiskAlert[]>;
   markAlertDelivered(idempotencyKey: string, deliveredAt: Date): Promise<void>;
-  markAlertSuppressed(idempotencyKey: string, suppressedAt: Date): Promise<void>;
+  markAlertSuppressed(
+    idempotencyKey: string,
+    suppressedAt: Date,
+  ): Promise<void>;
   recordAlertDeliveryFailure(
     idempotencyKey: string,
     reason: string,
