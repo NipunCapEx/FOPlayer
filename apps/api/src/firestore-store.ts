@@ -344,7 +344,10 @@ export class FirestoreMonitoringRepository implements MonitoringRepository {
     snapshot: MarketSnapshot,
   ): Promise<void> {
     const ownerUid = await this.getOwnerUid(strategyId);
-    await this.db.collection('strategySnapshots').doc(strategyId).set({
+    await this.db
+      .collection('strategySnapshots')
+      .doc(strategyId)
+      .set({
       strategyId,
       ownerUid,
       assessment,
