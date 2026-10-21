@@ -218,7 +218,6 @@ describe('RiskMonitor — business outcomes', () => {
     expect(harness.repository.markAlertSuppressed).toHaveBeenCalled();
   });
 
-
   it('emits caution, then critical, but not duplicates on repeated polling', async () => {
     const harness = createHarness(1080);
     await harness.monitor.runOnce();
