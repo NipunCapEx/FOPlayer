@@ -31,6 +31,7 @@ export interface UpdateStrategyInput {
 
 export interface StrategyRecord extends Strategy {
   ownerUid: string;
+  expiryDate?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -90,7 +91,9 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.expiryDate !== undefined ? { expiryDate: input.expiryDate } : {}),
+        ...(input.expiryDate !== undefined
+          ? { expiryDate: input.expiryDate }
+          : {}),
         updatedAt,
       });
       return {
@@ -473,7 +476,9 @@ function toStrategyRecord(doc: DocumentSnapshotPort): StrategyRecord | null {
     symbol: data.symbol as SupportedSymbol,
     entryPrice: data.entryPrice,
     active: data.active,
-    ...(typeof data.expiryDate === 'string' ? { expiryDate: data.expiryDate } : {}),
+    ...(typeof data.expiryDate === 'string'
+      ? { expiryDate: data.expiryDate }
+      : {}),
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
