@@ -335,20 +335,22 @@ class StrategyApiClient {
     return UserDashboard.fromJson(response);
   }
 
-  Future<List<UserStrategy>> listStrategies() async {
+  Future<List<UserStrategy>> listStrategies({
+    bool includeInactive = false,
+  }) async {
     final response = await _request('GET', '/api/strategies');
     if (response is! List) {
       throw const StrategyApiException('Unexpected strategies response.');
     }
-    return response
-        .map((value) {
-          if (value is! Map<String, dynamic>) {
-            throw const FormatException('Invalid strategy response item.');
-          }
-          return UserStrategy.fromJson(value);
-        })
-        .where((strategy) => strategy.active)
-        .toList();
+    final strategies = response.map((value) {
+      if (value is! Map<String, dynamic>) {
+        throw const FormatException('Invalid strategy response item.');
+      }
+      return UserStrategy.fromJson(value);
+    }).toList();
+    return includeInactive
+        ? strategies
+        : strategies.where((strategy) => strategy.active).toList();
   }
 
   Future<List<UserAlert>> listAlerts() async {
