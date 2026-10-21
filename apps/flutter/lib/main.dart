@@ -129,8 +129,7 @@ class Instrument {
         expiryDate: expiryDate ?? this.expiryDate,
         historicalCloses: historicalCloses ?? this.historicalCloses,
         thresholds: thresholds ?? this.thresholds,
-        notificationsEnabled:
-            notificationsEnabled ?? this.notificationsEnabled,
+        notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       );
 }
 
@@ -652,7 +651,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save notification preference: $error')),
+          SnackBar(
+              content: Text('Could not save notification preference: $error')),
         );
       }
       return;
@@ -1027,8 +1027,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   _editThresholds(instrument),
                               onNotificationsChanged: widget.apiClient == null
                                   ? null
-                                  : (enabled) =>
-                                      _setNotificationsEnabled(instrument, enabled),
+                                  : (enabled) => _setNotificationsEnabled(
+                                      instrument, enabled),
                               onRemove: () => _removeInstrument(instrument),
                               isDemo: widget.apiClient == null,
                             ),
