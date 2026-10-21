@@ -84,6 +84,7 @@ describe('StrategyService', () => {
         criticalPercent: 7,
         breachedPercent: 9,
       },
+      notificationsEnabled: false,
     });
 
     await expect(
