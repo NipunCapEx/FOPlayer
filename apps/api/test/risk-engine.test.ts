@@ -120,7 +120,6 @@ describe('assessRisk — business outcomes', () => {
   });
 });
 
-
 describe('configurable risk thresholds', () => {
   it('uses per-strategy thresholds for levels and structural boundaries', () => {
     const assessment = assessRisk({
