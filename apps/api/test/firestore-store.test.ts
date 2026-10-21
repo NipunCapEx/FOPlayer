@@ -218,6 +218,7 @@ describe('FirestoreStrategyStore — owner isolation', () => {
         criticalPercent: 8,
         breachedPercent: 10,
       },
+      notificationsEnabled: false,
     });
     await strategies.createForOwner('owner-b', {
       symbol: 'SBICARD',
@@ -226,6 +227,15 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     });
 
     expect(await strategies.listForOwner('owner-a')).toHaveLength(1);
+    expect(first.notificationsEnabled).toBe(false);
+    await expect(
+      strategies.updateForOwner('owner-a', first.id, {
+        notificationsEnabled: true,
+      }),
+    ).resolves.toMatchObject({ notificationsEnabled: true });
+    await expect(strategies.listForOwner('owner-a')).resolves.toMatchObject([
+      expect.objectContaining({ notificationsEnabled: true }),
+    ]);
     await expect(
       strategies.updateForOwner('owner-b', first.id, { active: false }),
     ).resolves.toBeNull();
