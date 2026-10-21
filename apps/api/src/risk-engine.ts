@@ -8,10 +8,23 @@ export const SUPPORTED_SYMBOLS = [
 export type SupportedSymbol = (typeof SUPPORTED_SYMBOLS)[number];
 export type RiskLevel = 'normal' | 'caution' | 'critical' | 'breached';
 
+export interface RiskThresholds {
+  cautionPercent: number;
+  criticalPercent: number;
+  breachedPercent: number;
+}
+
+export const DEFAULT_RISK_THRESHOLDS: RiskThresholds = {
+  cautionPercent: 8,
+  criticalPercent: 10,
+  breachedPercent: 12,
+};
+
 export interface RiskInput {
   symbol: SupportedSymbol;
   entryPrice: number;
   spotPrice: number;
+  thresholds?: RiskThresholds;
 }
 
 export interface RiskAssessment {
@@ -49,8 +62,21 @@ export function assessRisk(input: RiskInput): RiskAssessment {
   assertPositiveFinite(input.spotPrice, 'spotPrice');
 
   const { entryPrice, spotPrice, symbol } = input;
-  const lowerBoundary = entryPrice * 0.88;
-  const upperBoundary = entryPrice * 1.12;
+  const thresholds = input.thresholds ?? DEFAULT_RISK_THRESHOLDS;
+  assertPositiveFinite(thresholds.cautionPercent, 'cautionPercent');
+  assertPositiveFinite(thresholds.criticalPercent, 'criticalPercent');
+  assertPositiveFinite(thresholds.breachedPercent, 'breachedPercent');
+  if (
+    thresholds.cautionPercent >= thresholds.criticalPercent ||
+    thresholds.criticalPercent >= thresholds.breachedPercent ||
+    thresholds.breachedPercent >= 100
+  ) {
+    throw new InvalidRiskInputError(
+      'thresholds must increase and breachedPercent must be below 100',
+    );
+  }
+  const lowerBoundary = entryPrice * (1 - thresholds.breachedPercent / 100);
+  const upperBoundary = entryPrice * (1 + thresholds.breachedPercent / 100);
   const movementPercent = ((spotPrice - entryPrice) / entryPrice) * 100;
   const lowerBoundaryDistancePercent =
     ((spotPrice - lowerBoundary) / spotPrice) * 100;
@@ -59,12 +85,12 @@ export function assessRisk(input: RiskInput): RiskAssessment {
 
   // Structural breach has precedence over the percentage-based warning levels.
   let level: RiskLevel = 'normal';
-  if (Math.abs(movementPercent) >= 12) {
+  if (Math.abs(movementPercent) >= thresholds.breachedPercent) {
     // Compare the percentage at the exact threshold to avoid float drift in E * 1.12.
     level = 'breached';
-  } else if (Math.abs(movementPercent) >= 10) {
+  } else if (Math.abs(movementPercent) >= thresholds.criticalPercent) {
     level = 'critical';
-  } else if (Math.abs(movementPercent) >= 8) {
+  } else if (Math.abs(movementPercent) >= thresholds.cautionPercent) {
     level = 'caution';
   }
 

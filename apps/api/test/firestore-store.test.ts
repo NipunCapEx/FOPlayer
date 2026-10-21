@@ -211,6 +211,11 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       active: true,
       entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
+      thresholds: {
+        cautionPercent: 6,
+        criticalPercent: 8,
+        breachedPercent: 10,
+      },
     });
     await strategies.createForOwner('owner-b', {
       symbol: 'SBICARD',
@@ -231,8 +236,21 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       strategies.updateForOwner('owner-a', first.id, {
         entryPrice: 1200,
         active: false,
+        thresholds: {
+          cautionPercent: 5,
+          criticalPercent: 7,
+          breachedPercent: 9,
+        },
       }),
-    ).resolves.toMatchObject({ entryPrice: 1200, active: false });
+    ).resolves.toMatchObject({
+      entryPrice: 1200,
+      active: false,
+      thresholds: {
+        cautionPercent: 5,
+        criticalPercent: 7,
+        breachedPercent: 9,
+      },
+    });
   });
 
   it('rejects concurrent duplicate active strategies per owner and symbol', async () => {
@@ -269,6 +287,11 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       active: true,
       entryDate: '2026-10-15',
       expiryDate: '2026-10-29',
+      thresholds: {
+        cautionPercent: 5,
+        criticalPercent: 7,
+        breachedPercent: 9,
+      },
     });
     await strategies.updateForOwner('owner-a', original.id, { active: false });
 
@@ -286,6 +309,11 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       active: true,
       entryDate: '2026-10-16',
       expiryDate: '2026-11-26',
+      thresholds: {
+        cautionPercent: 5,
+        criticalPercent: 7,
+        breachedPercent: 9,
+      },
       ownerUid: 'owner-a',
     });
     await expect(strategies.listForOwner('owner-a')).resolves.toMatchObject([
@@ -293,6 +321,11 @@ describe('FirestoreStrategyStore — owner isolation', () => {
         id: original.id,
         entryDate: '2026-10-16',
         expiryDate: '2026-11-26',
+        thresholds: {
+          cautionPercent: 5,
+          criticalPercent: 7,
+          breachedPercent: 9,
+        },
       }),
     ]);
 
@@ -524,6 +557,39 @@ describe('FirestoreStrategyStore — owner isolation', () => {
 });
 
 describe('FirestoreMonitoringRepository — assessment and outbox', () => {
+  it('ignores malformed saved threshold configurations', async () => {
+    const { db, strategies } = createStores();
+    const invalidThresholds: unknown[] = [
+      null,
+      { cautionPercent: '5', criticalPercent: 7, breachedPercent: 9 },
+      { cautionPercent: Number.NaN, criticalPercent: 7, breachedPercent: 9 },
+      { cautionPercent: 0, criticalPercent: 7, breachedPercent: 9 },
+      { cautionPercent: 10, criticalPercent: 8, breachedPercent: 12 },
+      { cautionPercent: 5, criticalPercent: 8, breachedPercent: 7 },
+      { cautionPercent: 5, criticalPercent: 7, breachedPercent: 100 },
+    ];
+    for (const [index, thresholds] of invalidThresholds.entries()) {
+      await db
+        .collection('strategies')
+        .doc(`bad-threshold-${index}`)
+        .set({
+          ownerUid: 'owner-a',
+          symbol: 'RELIANCE',
+          entryPrice: 1000,
+          active: false,
+          thresholds,
+          createdAt: new Date('2026-10-01T00:00:00Z'),
+          updatedAt: new Date('2026-10-01T00:00:00Z'),
+        });
+    }
+
+    const records = await strategies.listForOwner('owner-a');
+    expect(records).toHaveLength(invalidThresholds.length);
+    expect(records.every((record) => record.thresholds === undefined)).toBe(
+      true,
+    );
+  });
+
   it('lists valid active strategies and retains owner context', async () => {
     const { db, strategies, monitoring } = createStores();
     const valid = await strategies.createForOwner('owner-a', {

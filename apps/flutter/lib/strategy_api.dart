@@ -3,6 +3,45 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
+class StrategyThresholds {
+  const StrategyThresholds({
+    this.cautionPercent = 8,
+    this.criticalPercent = 10,
+    this.breachedPercent = 12,
+  });
+
+  final double cautionPercent;
+  final double criticalPercent;
+  final double breachedPercent;
+
+  factory StrategyThresholds.fromJson(Object? value) {
+    if (value is! Map<String, dynamic>) return const StrategyThresholds();
+    final caution = value['cautionPercent'];
+    final critical = value['criticalPercent'];
+    final breached = value['breachedPercent'];
+    if (caution is! num || critical is! num || breached is! num) {
+      return const StrategyThresholds();
+    }
+    return StrategyThresholds(
+      cautionPercent: caution.toDouble(),
+      criticalPercent: critical.toDouble(),
+      breachedPercent: breached.toDouble(),
+    );
+  }
+
+  Map<String, double> toJson() => {
+        'cautionPercent': cautionPercent,
+        'criticalPercent': criticalPercent,
+        'breachedPercent': breachedPercent,
+      };
+
+  bool get isValid =>
+      cautionPercent > 0 &&
+      cautionPercent < criticalPercent &&
+      criticalPercent < breachedPercent &&
+      breachedPercent < 100;
+}
+
 class UserStrategy {
   const UserStrategy({
     required this.id,
@@ -11,6 +50,7 @@ class UserStrategy {
     required this.active,
     this.entryDate,
     this.expiryDate,
+    this.thresholds = const StrategyThresholds(),
   });
 
   final String id;
@@ -19,6 +59,7 @@ class UserStrategy {
   final bool active;
   final DateTime? entryDate;
   final DateTime? expiryDate;
+  final StrategyThresholds thresholds;
 
   factory UserStrategy.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
@@ -35,6 +76,7 @@ class UserStrategy {
         (expiryDate != null && expiryDate is! String)) {
       throw const FormatException('Invalid strategy returned by the API.');
     }
+    final parsedThresholds = StrategyThresholds.fromJson(json['thresholds']);
     return UserStrategy(
       id: id,
       symbol: symbol,
@@ -42,6 +84,9 @@ class UserStrategy {
       active: active,
       entryDate: entryDate is String ? DateTime.tryParse(entryDate) : null,
       expiryDate: expiryDate is String ? DateTime.tryParse(expiryDate) : null,
+      thresholds: parsedThresholds.isValid
+          ? parsedThresholds
+          : const StrategyThresholds(),
     );
   }
 }
@@ -319,6 +364,7 @@ class StrategyApiClient {
     required double entryPrice,
     DateTime? entryDate,
     DateTime? expiryDate,
+    StrategyThresholds? thresholds,
   }) async {
     final response = await _request(
       'POST',
@@ -328,6 +374,7 @@ class StrategyApiClient {
         'entryPrice': entryPrice,
         if (entryDate != null) 'entryDate': _formatDateOnly(entryDate),
         if (expiryDate != null) 'expiryDate': _formatDateOnly(expiryDate),
+        if (thresholds != null) 'thresholds': thresholds.toJson(),
       },
     );
     if (response is! Map<String, dynamic>) {
@@ -342,12 +389,14 @@ class StrategyApiClient {
     bool? active,
     DateTime? entryDate,
     DateTime? expiryDate,
+    StrategyThresholds? thresholds,
   }) async {
     final body = <String, dynamic>{};
     if (entryPrice != null) body['entryPrice'] = entryPrice;
     if (active != null) body['active'] = active;
     if (entryDate != null) body['entryDate'] = _formatDateOnly(entryDate);
     if (expiryDate != null) body['expiryDate'] = _formatDateOnly(expiryDate);
+    if (thresholds != null) body['thresholds'] = thresholds.toJson();
     final response = await _request(
       'PATCH',
       '/api/strategies/${Uri.encodeComponent(id)}',

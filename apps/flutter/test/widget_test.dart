@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foplayer/main.dart';
+import 'package:foplayer/strategy_api.dart';
 
 void main() {
   testWidgets('shows Google login entry point', (tester) async {
@@ -267,6 +268,60 @@ void main() {
       expect(find.text('Movement unavailable'), findsOneWidget);
     });
 
+    testWidgets('validates and saves custom risk thresholds', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => showDialog<StrategyThresholds>(
+                  context: context,
+                  builder: (_) => ThresholdsDialog(
+                    instrument: Instrument(
+                      symbol: 'RELIANCE',
+                      name: 'Reliance Industries',
+                      entryPrice: 1000,
+                      spotPrice: 1000,
+                      lastUpdated: DateTime(2026, 10, 20),
+                    ),
+                  ),
+                ),
+                child: const Text('Configure thresholds'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Configure thresholds'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const Key('caution-threshold-input')), '10');
+      await tester.enterText(
+          find.byKey(const Key('critical-threshold-input')), '8');
+      await tester.enterText(
+          find.byKey(const Key('breached-threshold-input')), '12');
+      await tester.tap(find.byKey(const Key('save-thresholds-button')));
+      await tester.pump();
+
+      expect(
+        find.text('Use positive thresholds in increasing order, below 100%.'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(
+          find.byKey(const Key('caution-threshold-input')), '5');
+      await tester.enterText(
+          find.byKey(const Key('critical-threshold-input')), '7');
+      await tester.enterText(
+          find.byKey(const Key('breached-threshold-input')), '9');
+      await tester.tap(find.byKey(const Key('save-thresholds-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Save thresholds'), findsNothing);
+      expect(find.text('Configure thresholds'), findsOneWidget);
+    });
+
     testWidgets('shows expiry configuration on the instrument card',
         (tester) async {
       await tester.pumpWidget(
@@ -281,10 +336,16 @@ void main() {
                 lastUpdated: DateTime(2026, 10, 20),
                 entryDate: DateTime(2026, 10, 15),
                 expiryDate: DateTime(2026, 11, 26),
+                thresholds: const StrategyThresholds(
+                  cautionPercent: 5,
+                  criticalPercent: 7,
+                  breachedPercent: 9,
+                ),
               ),
               onEditEntry: _noop,
               onEditEntryDate: _noop,
               onEditExpiry: _noop,
+              onEditThresholds: _noop,
             ),
           ),
         ),
@@ -293,6 +354,8 @@ void main() {
       expect(find.text('Entry date'), findsOneWidget);
       expect(find.text('2026-10-15'), findsOneWidget);
       expect(find.text('Edit entry date'), findsOneWidget);
+      expect(find.text('Risk thresholds'), findsNWidgets(2));
+      expect(find.text('5.0% / 7.0% / 9.0%'), findsOneWidget);
       expect(find.text('Expiry date'), findsOneWidget);
       expect(find.text('2026-11-26'), findsOneWidget);
       expect(find.text('Edit expiry'), findsOneWidget);

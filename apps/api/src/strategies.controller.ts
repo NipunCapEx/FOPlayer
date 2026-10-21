@@ -45,6 +45,9 @@ export class StrategiesController {
       ...(Object.hasOwn(body, 'expiryDate')
         ? { expiryDate: body.expiryDate }
         : {}),
+      ...(Object.hasOwn(body, 'thresholds')
+        ? { thresholds: body.thresholds }
+        : {}),
     });
   }
 
@@ -67,6 +70,9 @@ export class StrategiesController {
         : {}),
       ...(Object.hasOwn(body, 'expiryDate')
         ? { expiryDate: body.expiryDate }
+        : {}),
+      ...(Object.hasOwn(body, 'thresholds')
+        ? { thresholds: body.thresholds }
         : {}),
     });
   }
