@@ -22,6 +22,68 @@ void main() {
     expect(find.textContaining('google-services.json'), findsOneWidget);
   });
 
+  group('default watchlist seeding', () {
+    final templates = [
+      for (final symbol in ['RELIANCE', 'JSWSTEEL', 'BHARTIARTL', 'SBICARD'])
+        Instrument(
+          symbol: symbol,
+          name: symbol,
+          entryPrice: 1000,
+          spotPrice: 1000,
+          lastUpdated: DateTime(2026, 10, 20),
+        ),
+    ];
+
+    test('seeds all four defaults for a brand-new user', () {
+      expect(
+        defaultWatchlistItemsToSeed(templates, const []).map((item) => item.symbol),
+        ['RELIANCE', 'JSWSTEEL', 'BHARTIARTL', 'SBICARD'],
+      );
+    });
+
+    test('resumes a partial seed by creating only missing symbols', () {
+      final existing = [
+        const UserStrategy(
+          id: 'strategy-1',
+          symbol: 'RELIANCE',
+          entryPrice: 1000,
+          active: true,
+        ),
+      ];
+
+      expect(
+        defaultWatchlistItemsToSeed(templates, existing).map((item) => item.symbol),
+        ['JSWSTEEL', 'BHARTIARTL', 'SBICARD'],
+      );
+    });
+
+    test('does not re-create inactive defaults or seed custom-only profiles', () {
+      final allDefaultsIncludingRemoved = [
+        for (final symbol in ['RELIANCE', 'JSWSTEEL', 'BHARTIARTL', 'SBICARD'])
+          UserStrategy(
+            id: 'strategy-$symbol',
+            symbol: symbol,
+            entryPrice: 1000,
+            active: symbol != 'RELIANCE',
+          ),
+      ];
+      final customOnly = [
+        const UserStrategy(
+          id: 'strategy-custom',
+          symbol: 'RELIANCE',
+          entryPrice: 1000,
+          active: true,
+        ),
+      ];
+
+      expect(
+        defaultWatchlistItemsToSeed(templates, allDefaultsIncludingRemoved),
+        isEmpty,
+      );
+      expect(defaultWatchlistItemsToSeed(templates, customOnly), isEmpty);
+    });
+  });
+
   group('FOPlayer dashboard business outcomes', () {
     testWidgets(
         'does not show prototype fixtures when authenticated data fails',
