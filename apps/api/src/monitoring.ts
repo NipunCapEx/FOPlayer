@@ -358,9 +358,14 @@ export interface MarketHoursPolicy {
 
 export function isIndianEquityMarketOpen(
   now: Date,
-  policy: MarketHoursPolicy = {},
+  policy?: MarketHoursPolicy,
 ): boolean {
   if (!Number.isFinite(now.getTime())) return false;
+  // The worker uses this environment-driven policy by default. An invalid
+  // holiday list fails closed so a typo cannot silently enable holiday polling.
+  const effectivePolicy = policy ?? marketHoursPolicyFromEnvironment();
+  if (effectivePolicy === null) return false;
+  policy = effectivePolicy;
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Kolkata',
     weekday: 'short',
@@ -397,6 +402,14 @@ export function isIndianEquityMarketOpen(
   if (!Number.isFinite(hour) || !Number.isFinite(minute)) return false;
   const localMinutes = hour * 60 + minute;
   return localMinutes >= openingMinutes && localMinutes <= closingMinutes;
+}
+
+function marketHoursPolicyFromEnvironment(): MarketHoursPolicy | null {
+  const configured = process.env.FOPLAYER_MARKET_HOLIDAYS?.trim();
+  if (!configured) return {};
+  const holidays = configured.split(',').map((date) => date.trim());
+  if (holidays.some((date) => !isIsoCalendarDate(date))) return null;
+  return { holidays };
 }
 
 function parseMarketClock(value: string): number | null {
