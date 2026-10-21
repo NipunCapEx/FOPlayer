@@ -526,10 +526,27 @@ export class FirestoreMonitoringRepository
         price: Number(data.price),
         movementPercent: Number(data.movementPercent),
         createdAt: toDate(data.createdAt),
-        ...(typeof data.ownerUid === 'string'
+        ...(typeof data.notificationsEnabled === 'boolean'
+          ? { notificationsEnabled: data.notificationsEnabled }
+          : {}),
+        ...(typeof data.ownerUid === 'string
           ? { ownerUid: data.ownerUid }
           : {}),
       }));
+  }
+
+  async markAlertSuppressed(
+    idempotencyKey: string,
+    suppressedAt: Date,
+  ): Promise<void> {
+    await this.db
+      .collection('alerts')
+      .doc(alertDocumentId(idempotencyKey))
+      .update({
+        status: 'suppressed',
+        suppressedAt,
+        suppressionReason: 'strategy_notifications_disabled',
+      });
   }
 
   async markAlertDelivered(
