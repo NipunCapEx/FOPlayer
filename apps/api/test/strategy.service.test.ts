@@ -50,6 +50,7 @@ describe('StrategyService', () => {
       symbol: 'RELIANCE',
       entryPrice: 1250,
       active: true,
+      expiryDate: '2026-10-29',
     });
     expect(store.createForOwner).toHaveBeenCalledWith('owner-1', {
       symbol: 'RELIANCE',
@@ -90,6 +91,9 @@ describe('StrategyService', () => {
     });
     await expect(
       service.update('owner-1', 'strategy-1', { entryPrice: 0 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.update('owner-1', 'strategy-1', { expiryDate: 'tomorrow' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update('owner-1', 'strategy-1', { active: 'false' }),
