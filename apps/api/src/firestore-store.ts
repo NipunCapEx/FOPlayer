@@ -319,27 +319,67 @@ export class FirestoreStrategyStore {
     const data = strategy.data();
     if (!strategy.exists || data?.ownerUid !== ownerUid) return false;
 
-    const id = createHash('sha256').update(token).digest('hex');
-    await this.db.collection('deviceTokens').doc(id).set({
+    const collection = this.db.collection('deviceTokens');
+    const matchingTokens = await collection.where('token', '==', token).get();
+    for (const document of matchingTokens.docs) {
+      const record = document.data();
+      if (
+        record?.token === token &&
+        record.ownerUid !== ownerUid &&
+        record.active === true
+      ) {
+        await collection.doc(document.id).update({
+          active: false,
+          deactivatedReason: 'device-owner-changed',
+          updatedAt: new Date(),
+        });
+      }
+    }
+    const matchingStrategyTokens = matchingTokens.docs.filter((document) => {
+      const record = document.data();
+      return record?.ownerUid === ownerUid && record?.strategyId === strategyId;
+    });
+    const id =
+      matchingStrategyTokens[0]?.id ??
+      createHash('sha256')
+        .update(ownerUid)
+        .update('\\0')
+        .update(strategyId)
+        .update('\\0')
+        .update(token)
+        .digest('hex');
+    await collection.doc(id).set({
       ownerUid,
       strategyId,
       token,
       active: true,
       updatedAt: new Date(),
     });
+    for (const duplicate of matchingStrategyTokens.slice(1)) {
+      await collection.doc(duplicate.id).update({
+        active: false,
+        deactivatedReason: 'duplicate-token-registration',
+        updatedAt: new Date(),
+      });
+    }
     return true;
   }
 
   async deactivateDeviceToken(token: string): Promise<void> {
-    const id = createHash('sha256').update(token).digest('hex');
-    const reference = this.db.collection('deviceTokens').doc(id);
-    const snapshot = await reference.get();
-    if (!snapshot.exists) return;
-    await reference.update({
-      active: false,
-      deactivatedReason: 'fcm-unregistered',
-      updatedAt: new Date(),
-    });
+    const matchingTokens = await this.db
+      .collection('deviceTokens')
+      .where('token', '==', token)
+      .get();
+    const updatedAt = new Date();
+    for (const document of matchingTokens.docs) {
+      const data = document.data();
+      if (data?.token !== token || data.active !== true) continue;
+      await this.db.collection('deviceTokens').doc(document.id).update({
+        active: false,
+        deactivatedReason: 'fcm-unregistered',
+        updatedAt,
+      });
+    }
   }
 
   async listDeviceTokensForStrategy(strategyId: string): Promise<string[]> {

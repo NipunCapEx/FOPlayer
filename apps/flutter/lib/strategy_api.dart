@@ -335,20 +335,22 @@ class StrategyApiClient {
     return UserDashboard.fromJson(response);
   }
 
-  Future<List<UserStrategy>> listStrategies() async {
+  Future<List<UserStrategy>> listStrategies({
+    bool includeInactive = false,
+  }) async {
     final response = await _request('GET', '/api/strategies');
     if (response is! List) {
       throw const StrategyApiException('Unexpected strategies response.');
     }
-    return response
-        .map((value) {
-          if (value is! Map<String, dynamic>) {
-            throw const FormatException('Invalid strategy response item.');
-          }
-          return UserStrategy.fromJson(value);
-        })
-        .where((strategy) => strategy.active)
-        .toList();
+    final strategies = response.map((value) {
+      if (value is! Map<String, dynamic>) {
+        throw const FormatException('Invalid strategy response item.');
+      }
+      return UserStrategy.fromJson(value);
+    }).toList();
+    return includeInactive
+        ? strategies
+        : strategies.where((strategy) => strategy.active).toList();
   }
 
   Future<List<UserAlert>> listAlerts() async {
@@ -418,6 +420,19 @@ class StrategyApiClient {
       throw const StrategyApiException('Unexpected update response.');
     }
     return UserStrategy.fromJson(response);
+  }
+
+  Future<void> registerDeviceToken(String strategyId, String token) async {
+    final response = await _request(
+      'POST',
+      '/api/device-tokens',
+      body: {'strategyId': strategyId, 'token': token},
+    );
+    if (response is! Map<String, dynamic> || response['registered'] != true) {
+      throw const StrategyApiException(
+        'The backend did not confirm device-token registration.',
+      );
+    }
   }
 
   Future<dynamic> _request(

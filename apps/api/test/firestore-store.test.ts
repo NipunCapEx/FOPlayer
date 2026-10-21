@@ -538,6 +538,25 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       entryPrice: 1000,
       active: true,
     });
+    const secondStrategy = await strategies.createForOwner('owner-a', {
+      symbol: 'JSWSTEEL',
+      entryPrice: 900,
+      active: true,
+    });
+
+    const tokenId = createHash('sha256').update('device-token').digest('hex');
+    await db.collection('deviceTokens').doc(tokenId).set({
+      ownerUid: 'owner-a',
+      strategyId: strategy.id,
+      token: 'device-token',
+      active: true,
+    });
+    await db.collection('deviceTokens').doc('duplicate-token-association').set({
+      ownerUid: 'owner-a',
+      strategyId: strategy.id,
+      token: 'device-token',
+      active: true,
+    });
 
     await expect(
       strategies.registerDeviceToken('owner-b', strategy.id, 'device-token'),
@@ -554,6 +573,11 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     ).resolves.toBe(true);
     await strategies.registerDeviceToken(
       'owner-a',
+      secondStrategy.id,
+      'device-token',
+    );
+    await strategies.registerDeviceToken(
+      'owner-a',
       strategy.id,
       'another-device-token',
     );
@@ -565,19 +589,77 @@ describe('FirestoreStrategyStore — owner isolation', () => {
     await expect(
       strategies.listDeviceTokensForStrategy(strategy.id),
     ).resolves.toEqual(['device-token', 'another-device-token']);
+    await expect(
+      strategies.listDeviceTokensForStrategy(secondStrategy.id),
+    ).resolves.toEqual(['device-token']);
 
     await strategies.deactivateDeviceToken('missing-token');
+    await strategies.deactivateDeviceToken('device-token');
     await strategies.deactivateDeviceToken('device-token');
     await expect(
       strategies.listDeviceTokensForStrategy(strategy.id),
     ).resolves.toEqual(['another-device-token']);
-    const tokenId = createHash('sha256').update('device-token').digest('hex');
+    await expect(
+      strategies.listDeviceTokensForStrategy(secondStrategy.id),
+    ).resolves.toEqual([]);
+    const secondTokenId = createHash('sha256')
+      .update(`owner-a\\0${secondStrategy.id}\\0device-token`)
+      .digest('hex');
     expect(
       (await db.collection('deviceTokens').doc(tokenId).get()).data(),
     ).toMatchObject({
       active: false,
       deactivatedReason: 'fcm-unregistered',
     });
+    expect(
+      (
+        await db
+          .collection('deviceTokens')
+          .doc('duplicate-token-association')
+          .get()
+      ).data(),
+    ).toMatchObject({
+      active: false,
+      deactivatedReason: 'duplicate-token-registration',
+    });
+    expect(
+      (await db.collection('deviceTokens').doc(secondTokenId).get()).data(),
+    ).toMatchObject({
+      active: false,
+      deactivatedReason: 'fcm-unregistered',
+    });
+  });
+
+  it('moves a shared device token away from a previous account', async () => {
+    const { strategies } = createStores();
+    const ownerAStrategy = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    const ownerBStrategy = await strategies.createForOwner('owner-b', {
+      symbol: 'SBICARD',
+      entryPrice: 800,
+      active: true,
+    });
+
+    await strategies.registerDeviceToken(
+      'owner-a',
+      ownerAStrategy.id,
+      'shared-device-token',
+    );
+    await strategies.registerDeviceToken(
+      'owner-b',
+      ownerBStrategy.id,
+      'shared-device-token',
+    );
+
+    await expect(
+      strategies.listDeviceTokensForStrategy(ownerAStrategy.id),
+    ).resolves.toEqual([]);
+    await expect(
+      strategies.listDeviceTokensForStrategy(ownerBStrategy.id),
+    ).resolves.toEqual(['shared-device-token']);
   });
 });
 

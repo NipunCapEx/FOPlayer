@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'alert_history.dart';
+import 'notification_registration.dart';
 import 'package:foplayer/strategy_api.dart';
 
 Future<void> main() async {
@@ -343,6 +346,11 @@ class ApiSetupScreen extends StatelessWidget {
   }
 }
 
+List<UserStrategy> activeStrategiesForDashboard(
+  List<UserStrategy> strategies,
+) =>
+    strategies.where((strategy) => strategy.active).toList();
+
 List<Instrument> defaultWatchlistItemsToSeed(
   List<Instrument> templates,
   List<UserStrategy> existingStrategies,
@@ -394,10 +402,16 @@ Instrument mapUserStrategyToInstrument(
 }
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, this.onSignOut, this.apiClient});
+  const DashboardScreen({
+    super.key,
+    this.onSignOut,
+    this.apiClient,
+    this.enablePushNotifications = true,
+  });
 
   final VoidCallback? onSignOut;
   final StrategyApiClient? apiClient;
+  final bool enablePushNotifications;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -411,6 +425,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _dashboardError;
   Timer? _freshnessTimer;
   Timer? _snapshotRefreshTimer;
+  NotificationRegistrationService? _notificationRegistration;
 
   @override
   void initState() {
@@ -452,6 +467,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ? List<Instrument>.of(_defaultWatchlistTemplates)
         : <Instrument>[];
     if (widget.apiClient != null) {
+      if (!kIsWeb && widget.enablePushNotifications) {
+        final messaging = FirebaseMessaging.instance;
+        _notificationRegistration = NotificationRegistrationService(
+          requestPermission: () async {
+            final settings = await messaging.requestPermission(
+              alert: true,
+              badge: true,
+              sound: true,
+            );
+            return settings.authorizationStatus ==
+                    AuthorizationStatus.authorized ||
+                settings.authorizationStatus == AuthorizationStatus.provisional;
+          },
+          getToken: messaging.getToken,
+          tokenRefresh: messaging.onTokenRefresh,
+          registerDeviceToken: widget.apiClient!.registerDeviceToken,
+          onError: (error) =>
+              debugPrint('FCM device registration failed: $error'),
+        );
+      }
       _freshnessTimer = Timer.periodic(
         const Duration(minutes: 1),
         (_) => _refreshSnapshotFreshness(),
@@ -474,6 +509,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _freshnessTimer?.cancel();
     _snapshotRefreshTimer?.cancel();
+    unawaited(_notificationRegistration?.dispose());
     super.dispose();
   }
 
@@ -498,7 +534,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     try {
       var dashboard = await apiClient.getDashboard();
-      final existingStrategies = await apiClient.listStrategies();
+      final existingStrategies =
+          await apiClient.listStrategies(includeInactive: true);
       final missingDefaults = defaultWatchlistItemsToSeed(
         _defaultWatchlistTemplates,
         existingStrategies,
@@ -517,7 +554,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // A concurrent client or a timed-out response may have saved the
           // strategy already. Only suppress the error when the server confirms
           // that this symbol now exists; otherwise keep the retryable error.
-          final latestStrategies = await apiClient.listStrategies();
+          final latestStrategies =
+              await apiClient.listStrategies(includeInactive: true);
           if (!latestStrategies
               .any((strategy) => strategy.symbol == item.symbol)) {
             rethrow;
@@ -532,13 +570,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         for (final item in _defaultWatchlistTemplates) item.symbol: item,
       };
       final now = DateTime.now();
+      final activeStrategies =
+          activeStrategiesForDashboard(dashboard.strategies);
       setState(() {
         _strategyIds
           ..clear()
-          ..addEntries(dashboard.strategies.map(
+          ..addEntries(activeStrategies.map(
             (item) => MapEntry(item.symbol, item.id),
           ));
-        instruments = dashboard.strategies
+        instruments = activeStrategies
             .map((item) => mapUserStrategyToInstrument(
                   item,
                   dashboard.snapshots[item.id],
@@ -551,6 +591,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _hasLoadedPersistedWatchlist = true;
         _dashboardLoading = false;
       });
+      final notificationRegistration = _notificationRegistration;
+      if (notificationRegistration != null) {
+        unawaited(notificationRegistration.syncStrategies(activeStrategies));
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
