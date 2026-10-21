@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -47,8 +48,20 @@ export class StrategyService {
       );
     }
 
+    const symbol = command.symbol as SupportedSymbol;
+    const existing = await this.store.listForOwner(ownerUid);
+    if (
+      existing.some(
+        (strategy) => strategy.active && strategy.symbol === symbol,
+      )
+    ) {
+      throw new ConflictException(
+        'an active strategy already exists for this symbol',
+      );
+    }
+
     return this.store.createForOwner(ownerUid, {
-      symbol: command.symbol as SupportedSymbol,
+      symbol,
       entryPrice: command.entryPrice,
       active: true,
     });
