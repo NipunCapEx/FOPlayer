@@ -499,9 +499,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _dashboardLoading = false;
         _dashboardError = error.toString();
         if (_hasLoadedPersistedWatchlist) {
-          instruments = instruments
-              .map((item) => item.copyWith(isStale: true))
-              .toList();
+          instruments =
+              instruments.map((item) => item.copyWith(isStale: true)).toList();
         } else {
           // Never present local prototype fixtures as the signed-in user's data.
           instruments = [];
