@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  DEFAULT_RISK_THRESHOLDS,
   SUPPORTED_SYMBOLS,
   type RiskThresholds,
   type SupportedSymbol,
