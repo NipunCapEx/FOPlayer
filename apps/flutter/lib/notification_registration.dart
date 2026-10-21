@@ -41,7 +41,8 @@ class NotificationRegistrationService {
         if (!_permissionGranted) return;
         _tokenSubscription = tokenRefresh.listen(
           (token) => unawaited(_registerToken(token)),
-          onError: (Object error, StackTrace stackTrace) => onError?.call(error),
+          onError: (Object error, StackTrace stackTrace) =>
+              onError?.call(error),
         );
       } catch (error) {
         onError?.call(error);
