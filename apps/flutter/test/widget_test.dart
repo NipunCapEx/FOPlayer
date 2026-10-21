@@ -23,7 +23,8 @@ void main() {
   });
 
   group('FOPlayer dashboard business outcomes', () {
-    testWidgets('does not show prototype fixtures when authenticated data fails',
+    testWidgets(
+        'does not show prototype fixtures when authenticated data fails',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
