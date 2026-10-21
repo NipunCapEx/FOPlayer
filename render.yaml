@@ -3,6 +3,7 @@ services:
     name: foplayer-api
     runtime: node
     plan: free
+    region: singapore
     rootDir: apps/api
     buildCommand: npm install --no-audit --no-fund && npm run build
     startCommand: npm run start:prod
