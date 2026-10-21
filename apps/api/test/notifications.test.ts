@@ -220,6 +220,42 @@ describe('FcmTransport', () => {
     ]);
   });
 
+  it('does not resend delivered devices after a transport restart', async () => {
+    const delivered = new Set<string>();
+    const deliveryState = {
+      hasDeliveredTarget: vi.fn(async (_key: string, target: string) =>
+        delivered.has(target),
+      ),
+      markTargetDelivered: vi.fn(async (_key: string, target: string) => {
+        delivered.add(target);
+      }),
+    };
+    const sendMessage = vi
+      .fn(async (input: { token: string }) => {
+        if (input.token === 'device-2' && sendMessage.mock.calls.length === 2) {
+          throw new Error('temporary device failure');
+        }
+      });
+    const getTokens = async () => ['device-1', 'device-2'];
+    const first = new FcmTransport({ sendMessage }, getTokens, deliveryState);
+
+    await expect(first.send(alert)).rejects.toThrow(
+      'one or more registered devices',
+    );
+    const restarted = new FcmTransport(
+      { sendMessage },
+      getTokens,
+      deliveryState,
+    );
+    await restarted.send(alert);
+
+    expect(sendMessage.mock.calls.map(([input]) => input.token)).toEqual([
+      'device-1',
+      'device-2',
+      'device-2',
+    ]);
+  });
+
   it('fails clearly when no device is registered', async () => {
     const transport = new FcmTransport(
       { sendMessage: vi.fn(async () => {}) },
@@ -247,6 +283,38 @@ describe('MultiChannelDispatcher', () => {
       'One or more notification channels failed',
     );
     await dispatcher.dispatch(alert);
+
+    expect(telegram.send).toHaveBeenCalledOnce();
+    expect(fcm.send).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips a successful channel after a dispatcher restart', async () => {
+    const delivered = new Set<string>();
+    const deliveryState = {
+      hasDeliveredTarget: vi.fn(async (_key: string, target: string) =>
+        delivered.has(target),
+      ),
+      markTargetDelivered: vi.fn(async (_key: string, target: string) => {
+        delivered.add(target);
+      }),
+    };
+    const telegram = { send: vi.fn(async () => {}) };
+    const fcm = {
+      send: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('FCM unavailable'))
+        .mockResolvedValueOnce(undefined),
+    };
+    const first = new MultiChannelDispatcher([telegram, fcm], deliveryState);
+
+    await expect(first.dispatch(alert)).rejects.toThrow(
+      'One or more notification channels failed',
+    );
+    const restarted = new MultiChannelDispatcher(
+      [telegram, fcm],
+      deliveryState,
+    );
+    await restarted.dispatch(alert);
 
     expect(telegram.send).toHaveBeenCalledOnce();
     expect(fcm.send).toHaveBeenCalledTimes(2);
