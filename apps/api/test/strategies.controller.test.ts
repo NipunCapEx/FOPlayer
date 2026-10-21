@@ -84,6 +84,7 @@ describe('StrategiesController', () => {
         criticalPercent: 7,
         breachedPercent: 9,
       },
+      notificationsEnabled: false,
       ownerUid: 'attacker',
     });
     expect(service.create).toHaveBeenCalledWith('verified-user', {
@@ -96,6 +97,7 @@ describe('StrategiesController', () => {
         criticalPercent: 7,
         breachedPercent: 9,
       },
+      notificationsEnabled: false,
     });
 
     await controller.updateStrategy(request, 'strategy-1', {
@@ -107,6 +109,7 @@ describe('StrategiesController', () => {
         criticalPercent: 8,
         breachedPercent: 10,
       },
+      notificationsEnabled: false,
       ownerUid: 'attacker',
     });
     expect(service.update).toHaveBeenCalledWith('verified-user', 'strategy-1', {
@@ -118,6 +121,7 @@ describe('StrategiesController', () => {
         criticalPercent: 8,
         breachedPercent: 10,
       },
+      notificationsEnabled: false,
     });
 
     await controller.createStrategy(request, {
