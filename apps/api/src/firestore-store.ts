@@ -25,6 +25,7 @@ export interface CreateStrategyInput {
   entryDate?: string;
   expiryDate?: string;
   thresholds?: RiskThresholds;
+  notificationsEnabled?: boolean;
 }
 
 export interface UpdateStrategyInput {
@@ -33,6 +34,7 @@ export interface UpdateStrategyInput {
   entryDate?: string;
   expiryDate?: string;
   thresholds?: RiskThresholds;
+  notificationsEnabled?: boolean;
 }
 
 export interface StrategyRecord extends Strategy {
@@ -40,6 +42,7 @@ export interface StrategyRecord extends Strategy {
   entryDate?: string;
   expiryDate?: string;
   thresholds?: RiskThresholds;
+  notificationsEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -100,6 +103,9 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.notificationsEnabled !== undefined
+          ? { notificationsEnabled: input.notificationsEnabled }
+          : {}),
         ...(input.thresholds !== undefined
           ? { thresholds: input.thresholds }
           : {}),
@@ -115,6 +121,8 @@ export class FirestoreStrategyStore {
         ...current,
         entryPrice: input.entryPrice,
         active: input.active,
+        notificationsEnabled:
+          input.notificationsEnabled ?? current.notificationsEnabled,
         ...(input.thresholds !== undefined
           ? { thresholds: input.thresholds }
           : {}),
@@ -135,6 +143,7 @@ export class FirestoreStrategyStore {
       symbol: input.symbol,
       entryPrice: input.entryPrice,
       active: input.active,
+      notificationsEnabled: input.notificationsEnabled ?? true,
       ...(input.thresholds !== undefined
         ? { thresholds: input.thresholds }
         : {}),
@@ -166,6 +175,9 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
+        ...(input.notificationsEnabled !== undefined
+          ? { notificationsEnabled: input.notificationsEnabled }
+          : {}),
         ...(input.thresholds !== undefined
           ? { thresholds: input.thresholds }
           : {}),
@@ -181,6 +193,8 @@ export class FirestoreStrategyStore {
         ...raced,
         entryPrice: input.entryPrice,
         active: input.active,
+        notificationsEnabled:
+          input.notificationsEnabled ?? raced.notificationsEnabled,
         ...(input.thresholds !== undefined
           ? { thresholds: input.thresholds }
           : {}),
@@ -233,6 +247,9 @@ export class FirestoreStrategyStore {
     if (input.entryDate !== undefined) patch.entryDate = input.entryDate;
     if (input.expiryDate !== undefined) patch.expiryDate = input.expiryDate;
     if (input.thresholds !== undefined) patch.thresholds = input.thresholds;
+    if (input.notificationsEnabled !== undefined) {
+      patch.notificationsEnabled = input.notificationsEnabled;
+    }
     await reference.update(patch);
     return { ...current, ...input, updatedAt: patch.updatedAt as Date };
   }
@@ -371,6 +388,7 @@ export class FirestoreMonitoringRepository
         ...(record.thresholds !== undefined
           ? { thresholds: record.thresholds }
           : {}),
+        notificationsEnabled: record.notificationsEnabled,
       });
     }
     return strategies;
@@ -520,10 +538,27 @@ export class FirestoreMonitoringRepository
         price: Number(data.price),
         movementPercent: Number(data.movementPercent),
         createdAt: toDate(data.createdAt),
+        ...(typeof data.notificationsEnabled === 'boolean'
+          ? { notificationsEnabled: data.notificationsEnabled }
+          : {}),
         ...(typeof data.ownerUid === 'string'
           ? { ownerUid: data.ownerUid }
           : {}),
       }));
+  }
+
+  async markAlertSuppressed(
+    idempotencyKey: string,
+    suppressedAt: Date,
+  ): Promise<void> {
+    await this.db
+      .collection('alerts')
+      .doc(alertDocumentId(idempotencyKey))
+      .update({
+        status: 'suppressed',
+        suppressedAt,
+        suppressionReason: 'strategy_notifications_disabled',
+      });
   }
 
   async markAlertDelivered(
@@ -588,6 +623,10 @@ function toStrategyRecord(doc: DocumentSnapshotPort): StrategyRecord | null {
     symbol: data.symbol as SupportedSymbol,
     entryPrice: data.entryPrice,
     active: data.active,
+    notificationsEnabled:
+      typeof data.notificationsEnabled === 'boolean'
+        ? data.notificationsEnabled
+        : true,
     ...(typeof data.entryDate === 'string'
       ? { entryDate: data.entryDate }
       : {}),
