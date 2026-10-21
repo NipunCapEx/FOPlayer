@@ -99,9 +99,7 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined
-          ? { thresholds: input.thresholds }
-          : {}),
+        ...optionalThresholds(input.thresholds),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -114,9 +112,7 @@ export class FirestoreStrategyStore {
         ...current,
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined
-          ? { thresholds: input.thresholds }
-          : {}),
+        ...optionalThresholds(input.thresholds),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -165,9 +161,7 @@ export class FirestoreStrategyStore {
       await reference.update({
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined
-          ? { thresholds: input.thresholds }
-          : {}),
+        ...optionalThresholds(input.thresholds),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -180,9 +174,7 @@ export class FirestoreStrategyStore {
         ...raced,
         entryPrice: input.entryPrice,
         active: input.active,
-        ...(input.thresholds !== undefined
-          ? { thresholds: input.thresholds }
-          : {}),
+        ...optionalThresholds(input.thresholds),
         ...(input.entryDate !== undefined
           ? { entryDate: input.entryDate }
           : {}),
@@ -577,6 +569,12 @@ function isAlreadyExists(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? error.code : undefined;
   return code === 6 || code === 'already-exists';
+}
+
+function optionalThresholds(
+  thresholds?: RiskThresholds,
+): { thresholds?: RiskThresholds } {
+  return thresholds === undefined ? {} : { thresholds };
 }
 
 function isRiskThresholds(value: unknown): value is RiskThresholds {
