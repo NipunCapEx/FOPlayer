@@ -57,6 +57,7 @@ describe('StrategyService', () => {
           criticalPercent: 7,
           breachedPercent: 9,
         },
+        notificationsEnabled: false,
       }),
     ).resolves.toMatchObject({
       ownerUid: 'owner-1',
@@ -70,6 +71,7 @@ describe('StrategyService', () => {
         criticalPercent: 7,
         breachedPercent: 9,
       },
+      notificationsEnabled: false,
     });
     expect(store.createForOwner).toHaveBeenCalledWith('owner-1', {
       symbol: 'RELIANCE',
@@ -84,6 +86,13 @@ describe('StrategyService', () => {
       },
     });
 
+    await expect(
+      service.create('owner-1', {
+        symbol: 'RELIANCE',
+        entryPrice: 100,
+        notificationsEnabled: 'false',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.create('owner-1', {
         symbol: 'RELIANCE',
