@@ -612,6 +612,38 @@ describe('FirestoreStrategyStore — owner isolation', () => {
       deactivatedReason: 'fcm-unregistered',
     });
   });
+
+  it('moves a shared device token away from a previous account', async () => {
+    const { strategies } = createStores();
+    const ownerAStrategy = await strategies.createForOwner('owner-a', {
+      symbol: 'RELIANCE',
+      entryPrice: 1000,
+      active: true,
+    });
+    const ownerBStrategy = await strategies.createForOwner('owner-b', {
+      symbol: 'SBICARD',
+      entryPrice: 800,
+      active: true,
+    });
+
+    await strategies.registerDeviceToken(
+      'owner-a',
+      ownerAStrategy.id,
+      'shared-device-token',
+    );
+    await strategies.registerDeviceToken(
+      'owner-b',
+      ownerBStrategy.id,
+      'shared-device-token',
+    );
+
+    await expect(
+      strategies.listDeviceTokensForStrategy(ownerAStrategy.id),
+    ).resolves.toEqual([]);
+    await expect(
+      strategies.listDeviceTokensForStrategy(ownerBStrategy.id),
+    ).resolves.toEqual(['shared-device-token']);
+  });
 });
 
 describe('FirestoreMonitoringRepository — assessment and outbox', () => {
