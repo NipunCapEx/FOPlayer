@@ -319,20 +319,35 @@ export class FirestoreStrategyStore {
     const data = strategy.data();
     if (!strategy.exists || data?.ownerUid !== ownerUid) return false;
 
-    const id = createHash('sha256')
-      .update(ownerUid)
-      .update('\\0')
-      .update(strategyId)
-      .update('\\0')
-      .update(token)
-      .digest('hex');
-    await this.db.collection('deviceTokens').doc(id).set({
+    const collection = this.db.collection('deviceTokens');
+    const matchingTokens = await collection.where('token', '==', token).get();
+    const matchingStrategyTokens = matchingTokens.docs.filter((document) => {
+      const record = document.data();
+      return record?.ownerUid === ownerUid && record?.strategyId === strategyId;
+    });
+    const id =
+      matchingStrategyTokens[0]?.id ??
+      createHash('sha256')
+        .update(ownerUid)
+        .update('\\0')
+        .update(strategyId)
+        .update('\\0')
+        .update(token)
+        .digest('hex');
+    await collection.doc(id).set({
       ownerUid,
       strategyId,
       token,
       active: true,
       updatedAt: new Date(),
     });
+    for (const duplicate of matchingStrategyTokens.slice(1)) {
+      await collection.doc(duplicate.id).update({
+        active: false,
+        deactivatedReason: 'duplicate-token-registration',
+        updatedAt: new Date(),
+      });
+    }
     return true;
   }
 
