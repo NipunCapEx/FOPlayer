@@ -219,6 +219,21 @@ jobs:
           print("Configured Android release build type to use the uploaded release keystore.")
           PY
 
+      - name: Report Android signing certificate SHA fingerprints
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          echo "Signing certificate fingerprints for the CI upload/release keystore:"
+          keytool -list -v \
+            -keystore android/release-keystore.jks \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" \
+            | awk '/SHA1:|SHA-1:|SHA256:|SHA-256:/ { print }'
+          echo "NOTE: If Google Play App Signing is enabled, this is the upload-key certificate."
+          echo "For Google Sign-In on Play-installed builds, also register the App signing key SHA-1/SHA-256 from Play Console."
+
       - name: Generate release version
         id: version
         env:
