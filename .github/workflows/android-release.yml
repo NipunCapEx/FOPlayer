@@ -64,6 +64,9 @@ jobs:
             echo "::error::Generated Android application ID is not com.nipun.finance.fno"
             exit 1
           }
+          MAIN_ACTIVITY="android/app/src/main/kotlin/com/nipun/finance/fno/MainActivity.kt"
+          mkdir -p "$(dirname "$MAIN_ACTIVITY")"
+          cp tool/android/MainActivity.kt "$MAIN_ACTIVITY"
 
       - name: Validate required release configuration
         env:
@@ -98,12 +101,24 @@ jobs:
           }
           if expected not in packages:
               raise SystemExit(f"Firebase config does not contain Android package {expected}")
-          if not any(
-              oauth.get("client_type") == 3 and oauth.get("client_id")
+          web_clients = [
+              oauth.get("client_id")
               for client in data.get("client", [])
               for oauth in client.get("oauth_client", [])
-          ):
+              if oauth.get("client_type") == 3 and oauth.get("client_id")
+          ]
+          if not web_clients:
               raise SystemExit("Firebase config has no web OAuth client; configure Google Sign-In in Firebase.")
+          certificate_hashes = sorted({
+              oauth.get("android_info", {}).get("certificate_hash")
+              for client in data.get("client", [])
+              for oauth in client.get("oauth_client", [])
+              if oauth.get("client_type") == 1 and oauth.get("android_info", {}).get("certificate_hash")
+          })
+          print(f"FOPLAYER_FIREBASE_PROJECT_ID={data.get('project_info', {}).get('project_id', 'unknown')}")
+          print(f"FOPLAYER_ANDROID_PACKAGE={expected}")
+          print("FOPLAYER_WEB_OAUTH_CLIENT_IDS=" + ",".join(web_clients))
+          print("FOPLAYER_FIREBASE_ANDROID_OAUTH_CERTIFICATE_HASHES=" + ",".join(certificate_hashes))
           print("Firebase Android package and web OAuth client validated.")
           PY
 
@@ -225,12 +240,18 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          echo "Signing certificate fingerprints for the CI upload/release keystore:"
-          keytool -list -v \
+          KEYSTORE_CERTS=$(keytool -list -v \
             -keystore android/release-keystore.jks \
-            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
-            -alias "$ANDROID_KEY_ALIAS" \
-            | awk '/SHA1:|SHA-1:|SHA256:|SHA-256:/ { print }'
+            -storepass:env ANDROID_KEYSTORE_PASSWORD \
+            -alias "$ANDROID_KEY_ALIAS")
+          UPLOAD_SHA1=$(printf '%s\n' "$KEYSTORE_CERTS" | awk -F': ' '/SHA1:|SHA-1:/{print $2; exit}')
+          UPLOAD_SHA256=$(printf '%s\n' "$KEYSTORE_CERTS" | awk -F': ' '/SHA256:|SHA-256:/{print $2; exit}')
+          if [ -z "$UPLOAD_SHA1" ] || [ -z "$UPLOAD_SHA256" ]; then
+            echo "::error::Could not read fingerprints from the configured upload certificate."
+            exit 1
+          fi
+          echo "FOPLAYER_UPLOAD_KEY_SHA1=$UPLOAD_SHA1"
+          echo "FOPLAYER_UPLOAD_KEY_SHA256=$UPLOAD_SHA256"
           echo "NOTE: If Google Play App Signing is enabled, this is the upload-key certificate."
           echo "For Google Sign-In on Play-installed builds, also register the App signing key SHA-1/SHA-256 from Play Console."
 
@@ -253,6 +274,46 @@ jobs:
 
       - name: Build signed Android App Bundle for Google Play
         run: flutter build appbundle --release --build-name="${{ steps.version.outputs.name }}" --build-number="${{ steps.version.outputs.code }}" --dart-define=FOPLAYER_API_BASE_URL="${{ vars.FOPLAYER_API_BASE_URL }}"
+
+      - name: Report and verify release APK certificate fingerprints
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS_DIR=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          UPLOAD_CERTS=$(keytool -list -v -keystore android/release-keystore.jks -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS")
+          UPLOAD_SHA1=$(printf '%s\n' "$UPLOAD_CERTS" | awk -F': ' '/SHA1:|SHA-1:/{print $2; exit}')
+          UPLOAD_SHA256=$(printf '%s\n' "$UPLOAD_CERTS" | awk -F': ' '/SHA256:|SHA-256:/{print $2; exit}')
+          APK_CERTS=$("$BUILD_TOOLS_DIR/apksigner" verify --print-certs "$APK")
+          APK_SHA1=$(printf '%s\n' "$APK_CERTS" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | head -n 1)
+          APK_SHA256=$(printf '%s\n' "$APK_CERTS" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n 1)
+          for value in "$UPLOAD_SHA1" "$UPLOAD_SHA256" "$APK_SHA1" "$APK_SHA256"; do
+            if [ -z "$value" ]; then
+              echo "::error::Could not read upload or APK signing fingerprints."
+              exit 1
+            fi
+          done
+          echo "FOPLAYER_RELEASE_APK_SHA1=$APK_SHA1"
+          echo "FOPLAYER_RELEASE_APK_SHA256=$APK_SHA256"
+          normalize_fingerprint() { printf '%s' "$1" | tr -d ':' | tr '[:lower:]' '[:upper:]'; }
+          if [ "$(normalize_fingerprint "$UPLOAD_SHA1")" != "$(normalize_fingerprint "$APK_SHA1")" ] ||
+             [ "$(normalize_fingerprint "$UPLOAD_SHA256")" != "$(normalize_fingerprint "$APK_SHA256")" ]; then
+            echo "::error::Release APK signer does not match the configured upload certificate."
+            exit 1
+          fi
+          echo "Verified: release APK is signed with the configured upload certificate."
+          echo "For Google Play installs, use runtime signer fingerprints logged by FOPLAYER_AUTH_DIAGNOSTICS."
+          {
+            echo "## Android signing certificate fingerprints"
+            echo "- Configured upload certificate SHA-1: `$UPLOAD_SHA1`"
+            echo "- Configured upload certificate SHA-256: `$UPLOAD_SHA256`"
+            echo "- Built APK signer SHA-1: `$APK_SHA1`"
+            echo "- Built APK signer SHA-256: `$APK_SHA256`"
+            echo
+            echo "For Play Store installs, compare the runtime signer fingerprints from FOPLAYER_AUTH_DIAGNOSTICS."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify release artifacts
         run: |
