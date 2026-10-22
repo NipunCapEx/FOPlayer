@@ -36,7 +36,7 @@ For Firebase Google Sign-In, use the fingerprints for the certificate that actua
 4. Download the updated `google-services.json` after Firebase has updated its OAuth configuration, then replace the GitHub Actions secret `FIREBASE_GOOGLE_SERVICES_JSON` with the full JSON content. Do not commit it to the repository.
 5. Rebuild and test Google Sign-In from both the direct APK path and the Play-distributed path. If the issue persists, verify the Firebase project, Android package ID, enabled Google provider, and OAuth web client before changing unrelated code.
 
-The CI cannot derive the Play app-signing certificate fingerprint from the upload keystore. That fingerprint must come from Play Console (or a trusted copy of its certificate). Do not register a fingerprint from another app unless you have verified that the same certificate signs FnO Player.
+The CI cannot derive the Play app-signing certificate fingerprint from the upload keystore. That fingerprint must come from Play Console (or a trusted copy of its certificate). When Google sign-in is attempted, the app also logs `FOPLAYER_AUTH_DIAGNOSTICS` with the runtime package, signer SHA-1/SHA-256, Firebase project/app IDs, and web OAuth client ID. Capture it with Android Studio Logcat filtered to `FOPLAYER_AUTH_DIAGNOSTICS`, or run `adb logcat -s FOPLAYER_AUTH_DIAGNOSTICS:I` while opening the login screen. The Android Release workflow prints the Firebase project ID, package, OAuth client IDs, and Android certificate hashes embedded in the configured JSON, so you can compare the installed signer against the Firebase config. Do not register a fingerprint from another app unless you have verified that the same certificate signs FnO Player.
 
 ## Release validation
 When the relevant capabilities exist:
