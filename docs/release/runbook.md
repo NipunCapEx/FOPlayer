@@ -57,4 +57,9 @@ The Android Release workflow prints these non-secret identifiers in its logs:
 
 The app also logs `FOPLAYER_AUTH_DIAGNOSTICS` when Google sign-in is attempted. For an APK installed directly, its runtime signer should match the CI upload certificate. For an app installed from Google Play, the runtime signer is the **Play App Signing certificate**, which may differ from the upload key and is the fingerprint that must be registered in Firebase. Capture it using Android Studio Logcat filtered to `FOPLAYER_AUTH_DIAGNOSTICS`, or run `adb logcat -s FOPLAYER_AUTH_DIAGNOSTICS:I` while opening the login screen.
 
+Interpret the comparison as follows:
+- **APK signer matches upload certificate; Play-installed signer differs:** expected when Play App Signing is enabled. Register the Play App Signing certificate in Firebase for Play Store sign-in.
+- **Runtime signer is absent from Firebase's Android OAuth certificate hashes:** add that SHA-1 in Firebase, then download the refreshed `google-services.json` and update the GitHub secret.
+- **Firebase project ID or package differs from the intended production app:** correct the release secret/variable before publishing; do not add fingerprints to the wrong Firebase project.
+
 If fingerprints are missing or mismatched, open Google Play Console → App integrity → App signing, copy the **App signing key certificate** SHA-1 and SHA-256 (not only the upload key), then add them to Firebase Console → Project settings → Your apps → Android app for package `com.nipun.finance.fno`. Ensure Google is enabled under Firebase Authentication → Sign-in method, download the refreshed `google-services.json`, and update the GitHub Actions secret `FIREBASE_GOOGLE_SERVICES_JSON`. Do not put keystore passwords, private keys, or service-account credentials in logs. SHA fingerprints and OAuth client IDs are identifiers, not credentials.
