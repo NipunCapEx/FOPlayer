@@ -113,6 +113,23 @@ jobs:
       - working-directory: apps/flutter
         if: steps.flutter.outputs.available == 'true'
         run: flutter build web --release
+      - name: Set up Java for Android smoke build
+        if: steps.flutter.outputs.available == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile generated Android auth diagnostics bridge
+        if: steps.flutter.outputs.available == 'true'
+        working-directory: apps/flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter create --platforms=android --org com.nipun.finance --project-name fno .
+          MAIN_ACTIVITY="android/app/src/main/kotlin/com/nipun/finance/fno/MainActivity.kt"
+          mkdir -p "$(dirname "$MAIN_ACTIVITY")"
+          cp tool/android/MainActivity.kt "$MAIN_ACTIVITY"
+          flutter build apk --debug
 
   android-release-build:
     name: Android release build (manual)
