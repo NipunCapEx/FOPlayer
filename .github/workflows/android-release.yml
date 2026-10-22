@@ -287,11 +287,17 @@ jobs:
           UPLOAD_SHA1=$(printf '%s\n' "$UPLOAD_CERTS" | awk -F': ' '/SHA1:|SHA-1:/{print $2; exit}')
           UPLOAD_SHA256=$(printf '%s\n' "$UPLOAD_CERTS" | awk -F': ' '/SHA256:|SHA-256:/{print $2; exit}')
           APK_CERTS=$("$BUILD_TOOLS_DIR/apksigner" verify --print-certs "$APK")
-          APK_SHA1=$(printf '%s\n' "$APK_CERTS" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | head -n 1)
-          APK_SHA256=$(printf '%s\n' "$APK_CERTS" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n 1)
-          for value in "$UPLOAD_SHA1" "$UPLOAD_SHA256" "$APK_SHA1" "$APK_SHA256"; do
-            if [ -z "$value" ]; then
-              echo "::error::Could not read upload or APK signing fingerprints."
+          # Parse digest labels robustly across Android build-tools versions and harmless
+          # output-prefix/whitespace changes. Never print certificate/private-key contents.
+          APK_SHA1=$(printf '%s\n' "$APK_CERTS" | sed -nE 's/.*SHA-1 digest:[[:space:]]*([[:xdigit:]:]+).*/\1/Ip' | head -n 1)
+          APK_SHA256=$(printf '%s\n' "$APK_CERTS" | sed -nE 's/.*SHA-256 digest:[[:space:]]*([[:xdigit:]:]+).*/\1/Ip' | head -n 1)
+          for name in UPLOAD_SHA1 UPLOAD_SHA256 APK_SHA1 APK_SHA256; do
+            if [ -z "\${!name}" ]; then
+              echo "::error::Could not extract $name from signing-tool output."
+              if [ "$name" = "APK_SHA1" ] || [ "$name" = "APK_SHA256" ]; then
+                echo "apksigner output labels available:"
+                printf '%s\n' "$APK_CERTS" | grep -Ei 'signer|sha-?1|sha-?256' || true
+              fi
               exit 1
             fi
           done
