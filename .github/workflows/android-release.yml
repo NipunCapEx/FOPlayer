@@ -248,7 +248,7 @@ jobs:
           KEYSTORE_CERTS=$(keytool -list -v \
             -keystore android/release-keystore.jks \
             -alias "$ANDROID_KEY_ALIAS" \
-            -storepass "$ANDROID_KEYSTORE_PASSWORD")
+            -storepass:env ANDROID_KEYSTORE_PASSWORD)
           UPLOAD_SHA1=$(printf '%s\n' "$KEYSTORE_CERTS" | awk -F': ' '/SHA1:/{print $2; exit}')
           UPLOAD_SHA256=$(printf '%s\n' "$KEYSTORE_CERTS" | awk -F': ' '/SHA256:/{print $2; exit}')
           if [ -z "$UPLOAD_SHA1" ] || [ -z "$UPLOAD_SHA256" ]; then
@@ -280,6 +280,15 @@ jobs:
           fi
           echo "Verified: release APK signer matches the configured upload certificate."
           echo "Note: Google Play App Signing may use a different certificate for Play-distributed installs."
+          {
+            echo "## Android signing certificate fingerprints"
+            echo "- Configured upload certificate SHA-1: `$UPLOAD_SHA1`"
+            echo "- Configured upload certificate SHA-256: `$UPLOAD_SHA256`"
+            echo "- Built APK signer SHA-1: `$APK_SHA1`"
+            echo "- Built APK signer SHA-256: `$APK_SHA256`"
+            echo
+            echo "For Play Store sign-in, also verify the Play App Signing certificate in Play Console."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify release artifacts
         run: |
