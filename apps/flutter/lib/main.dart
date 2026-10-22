@@ -30,7 +30,8 @@ Future<void> _logAuthDiagnostics() async {
       'webClientId=${native?['webClientId'] ?? "unavailable"}',
     );
   } catch (error) {
-    debugPrint('[FOPLAYER_AUTH_DIAGNOSTICS] native diagnostics unavailable: $error');
+    debugPrint(
+        '[FOPLAYER_AUTH_DIAGNOSTICS] native diagnostics unavailable: $error');
   }
 }
 
