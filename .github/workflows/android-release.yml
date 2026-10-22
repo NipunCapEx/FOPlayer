@@ -307,6 +307,15 @@ jobs:
           fi
           echo "Verified: release APK is signed with the configured upload certificate."
           echo "For Google Play installs, use runtime signer fingerprints logged by FOPLAYER_AUTH_DIAGNOSTICS."
+          {
+            echo "## Android signing certificate fingerprints"
+            echo "- Configured upload certificate SHA-1: `$UPLOAD_SHA1`"
+            echo "- Configured upload certificate SHA-256: `$UPLOAD_SHA256`"
+            echo "- Built APK signer SHA-1: `$APK_SHA1`"
+            echo "- Built APK signer SHA-256: `$APK_SHA256`"
+            echo
+            echo "For Play Store installs, compare the runtime signer fingerprints from FOPLAYER_AUTH_DIAGNOSTICS."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify release artifacts
         run: |
