@@ -24,6 +24,20 @@
 - Never embed privileged credentials in Flutter web/mobile assets or commit them to source control.
 - Apply least privilege and review Firebase rules before enabling production traffic.
 
+## Android Google Sign-In SHA fingerprint diagnostics
+
+The manual **Android Release** workflow prints the configured upload certificate's SHA-1/SHA-256 fingerprints and the signed APK's SHA-1/SHA-256 fingerprints in the **Report signing certificate fingerprints for Google Sign-In diagnostics** step. It fails if the APK signer does not match the configured upload certificate. The logs contain public certificate fingerprints only; never print or upload the keystore, private key, passwords, or base64 keystore secret.
+
+For Firebase Google Sign-In, use the fingerprints for the certificate that actually signs the installed app:
+
+1. Run **Actions → Android Release** to inspect the upload-certificate fingerprints. These are useful for locally installed APKs signed with the configured upload key.
+2. If the app is distributed through Google Play with Play App Signing enabled, open **Play Console → Test and release / Setup → App integrity** and copy the **App signing key certificate** SHA-1 and SHA-256 fingerprints. Do not assume these match the upload key.
+3. In the Firebase project used by FnO Player, open **Project settings → Your apps → Android app** and add the required SHA-1 and SHA-256 fingerprints. Include the upload certificate only when that signing certificate is used for the install path being tested; include the Play app-signing certificate for Play Store installs.
+4. Download the updated `google-services.json` after Firebase has updated its OAuth configuration, then replace the GitHub Actions secret `FIREBASE_GOOGLE_SERVICES_JSON` with the full JSON content. Do not commit it to the repository.
+5. Rebuild and test Google Sign-In from both the direct APK path and the Play-distributed path. If the issue persists, verify the Firebase project, Android package ID, enabled Google provider, and OAuth web client before changing unrelated code.
+
+The CI cannot derive the Play app-signing certificate fingerprint from the upload keystore. That fingerprint must come from Play Console (or a trusted copy of its certificate). Do not register a fingerprint from another app unless you have verified that the same certificate signs FnO Player.
+
 ## Release validation
 When the relevant capabilities exist:
 1. Check backend health/readiness and error logs.
