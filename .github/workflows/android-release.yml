@@ -65,6 +65,10 @@ jobs:
             exit 1
           }
 
+          MAIN_ACTIVITY="android/app/src/main/kotlin/com/nipun/finance/fno/MainActivity.kt"
+          mkdir -p "$(dirname "$MAIN_ACTIVITY")"
+          cp tool/android/MainActivity.kt "$MAIN_ACTIVITY"
+
       - name: Validate required release configuration
         env:
           FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
@@ -98,12 +102,24 @@ jobs:
           }
           if expected not in packages:
               raise SystemExit(f"Firebase config does not contain Android package {expected}")
-          if not any(
-              oauth.get("client_type") == 3 and oauth.get("client_id")
+          web_clients = [
+              oauth.get("client_id")
               for client in data.get("client", [])
               for oauth in client.get("oauth_client", [])
-          ):
+              if oauth.get("client_type") == 3 and oauth.get("client_id")
+          ]
+          if not web_clients:
               raise SystemExit("Firebase config has no web OAuth client; configure Google Sign-In in Firebase.")
+          certificate_hashes = sorted({
+              oauth.get("android_info", {}).get("certificate_hash")
+              for client in data.get("client", [])
+              for oauth in client.get("oauth_client", [])
+              if oauth.get("client_type") == 1 and oauth.get("android_info", {}).get("certificate_hash")
+          })
+          print(f"FOPLAYER_FIREBASE_PROJECT_ID={data.get('project_info', {}).get('project_id', 'unknown')}")
+          print(f"FOPLAYER_ANDROID_PACKAGE={expected}")
+          print("FOPLAYER_WEB_OAUTH_CLIENT_IDS=" + ",".join(web_clients))
+          print("FOPLAYER_FIREBASE_ANDROID_OAUTH_CERTIFICATE_HASHES=" + ",".join(certificate_hashes))
           print("Firebase Android package and web OAuth client validated.")
           PY
 
@@ -255,8 +271,8 @@ jobs:
             echo "::error::Could not read SHA fingerprints from the configured upload certificate."
             exit 1
           fi
-          echo "ANDROID_UPLOAD_CERT_SHA1=$UPLOAD_SHA1"
-          echo "ANDROID_UPLOAD_CERT_SHA256=$UPLOAD_SHA256"
+          echo "FOPLAYER_UPLOAD_KEY_SHA1=$UPLOAD_SHA1"
+          echo "FOPLAYER_UPLOAD_KEY_SHA256=$UPLOAD_SHA256"
 
           APK="build/app/outputs/flutter-apk/app-release.apk"
           BUILD_TOOLS_DIR=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
@@ -269,8 +285,8 @@ jobs:
             echo "::error::Could not read fingerprints from the built APK signer."
             exit 1
           fi
-          echo "RELEASE_APK_CERT_SHA1=$APK_SHA1"
-          echo "RELEASE_APK_CERT_SHA256=$APK_SHA256"
+          echo "FOPLAYER_RELEASE_APK_SHA1=$APK_SHA1"
+          echo "FOPLAYER_RELEASE_APK_SHA256=$APK_SHA256"
 
           normalize_fingerprint() { printf '%s' "$1" | tr -d ':' | tr '[:lower:]' '[:upper:]'; }
           if [ "$(normalize_fingerprint "$UPLOAD_SHA1")" != "$(normalize_fingerprint "$APK_SHA1")" ] ||
