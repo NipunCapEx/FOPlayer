@@ -65,6 +65,100 @@ jobs:
             exit 1
           }
 
+          # Install a native diagnostic bridge in the generated Android scaffold.
+          # It reports the certificate of the APK actually installed (Play App Signing
+          # certificate for Play installs), not just the CI upload certificate.
+          MAIN_ACTIVITY="android/app/src/main/kotlin/com/nipun/finance/fno/MainActivity.kt"
+          mkdir -p "$(dirname "$MAIN_ACTIVITY")"
+          cat > "$MAIN_ACTIVITY" <<'KOTLIN'
+          package com.nipun.finance.fno
+
+          import android.content.pm.PackageInfo
+          import android.content.pm.PackageManager
+          import android.os.Build
+          import android.util.Log
+          import io.flutter.embedding.android.FlutterActivity
+          import io.flutter.embedding.engine.FlutterEngine
+          import io.flutter.plugin.common.MethodChannel
+          import java.io.ByteArrayInputStream
+          import java.security.MessageDigest
+          import java.security.cert.CertificateFactory
+          import java.security.cert.X509Certificate
+
+          class MainActivity : FlutterActivity() {
+              override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+                  super.configureFlutterEngine(flutterEngine)
+                  MethodChannel(
+                      flutterEngine.dartExecutor.binaryMessenger,
+                      "com.nipun.finance.fno/auth_diagnostics"
+                  ).setMethodCallHandler { call, result ->
+                      if (call.method != "signingInfo") {
+                          result.notImplemented()
+                      } else {
+                          try {
+                              val signatures = signingCertificates()
+                              val certificates = signatures.map { signature ->
+                                  CertificateFactory.getInstance("X.509")
+                                      .generateCertificate(
+                                          ByteArrayInputStream(signature.toByteArray())
+                                      ) as X509Certificate
+                              }
+                              val sha1 = certificates.map { fingerprint(it, "SHA-1") }
+                              val sha256 = certificates.map { fingerprint(it, "SHA-256") }
+                              val resourceId = resources.getIdentifier(
+                                  "default_web_client_id", "string", packageName
+                              )
+                              val webClientId = if (resourceId == 0) "" else getString(resourceId)
+                              val diagnostic = mapOf(
+                                  "packageName" to packageName,
+                                  "signerSha1" to sha1.joinToString(","),
+                                  "signerSha256" to sha256.joinToString(","),
+                                  "webClientId" to webClientId
+                              )
+                              Log.i(
+                                  "FOPLAYER_AUTH_DIAGNOSTICS",
+                                  diagnostic.entries.joinToString(" ") { "${it.key}=${it.value}" }
+                              )
+                              result.success(diagnostic)
+                          } catch (error: Exception) {
+                              Log.e("FOPLAYER_AUTH_DIAGNOSTICS", "Could not read signing identity", error)
+                              result.error("SIGNING_DIAGNOSTICS_FAILED", error.message, null)
+                          }
+                      }
+                  }
+              }
+
+              @Suppress("DEPRECATION")
+              private fun signingCertificates(): List<android.content.pm.Signature> {
+                  val info: PackageInfo = if (Build.VERSION.SDK_INT >= 33) {
+                      packageManager.getPackageInfo(
+                          packageName,
+                          PackageManager.PackageInfoFlags.of(
+                              PackageManager.GET_SIGNING_CERTIFICATES.toLong()
+                          )
+                      )
+                  } else if (Build.VERSION.SDK_INT >= 28) {
+                      packageManager.getPackageInfo(
+                          packageName, PackageManager.GET_SIGNING_CERTIFICATES
+                      )
+                  } else {
+                      packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
+                  }
+                  val signatures = if (Build.VERSION.SDK_INT >= 28) {
+                      info.signingInfo?.apkContentsSigners
+                  } else {
+                      info.signatures
+                  }
+                  return signatures?.toList()
+                      ?: throw IllegalStateException("No app signing certificate was found")
+              }
+
+              private fun fingerprint(certificate: X509Certificate, algorithm: String): String =
+                  MessageDigest.getInstance(algorithm).digest(certificate.encoded)
+                      .joinToString(":") { byte -> "%02X".format(byte.toInt() and 0xff) }
+          }
+          KOTLIN
+
       - name: Validate required release configuration
         env:
           FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
@@ -98,12 +192,24 @@ jobs:
           }
           if expected not in packages:
               raise SystemExit(f"Firebase config does not contain Android package {expected}")
-          if not any(
-              oauth.get("client_type") == 3 and oauth.get("client_id")
+          web_clients = [
+              oauth.get("client_id")
               for client in data.get("client", [])
               for oauth in client.get("oauth_client", [])
-          ):
+              if oauth.get("client_type") == 3 and oauth.get("client_id")
+          ]
+          if not web_clients:
               raise SystemExit("Firebase config has no web OAuth client; configure Google Sign-In in Firebase.")
+          certificate_hashes = sorted({
+              oauth.get("android_info", {}).get("certificate_hash")
+              for client in data.get("client", [])
+              for oauth in client.get("oauth_client", [])
+              if oauth.get("client_type") == 1 and oauth.get("android_info", {}).get("certificate_hash")
+          })
+          print(f"FOPLAYER_FIREBASE_PROJECT_ID={data.get('project_info', {}).get('project_id', 'unknown')}")
+          print(f"FOPLAYER_ANDROID_PACKAGE={expected}")
+          print("FOPLAYER_WEB_OAUTH_CLIENT_IDS=" + ",".join(web_clients))
+          print("FOPLAYER_FIREBASE_ANDROID_OAUTH_CERTIFICATE_HASHES=" + ",".join(certificate_hashes))
           print("Firebase Android package and web OAuth client validated.")
           PY
 
@@ -128,6 +234,9 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release-keystore.jks
+          echo "=== FnO Player CI upload certificate fingerprints (not necessarily the Play App Signing certificate) ==="
+          keytool -list -v -keystore android/release-keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" |
+            awk '/SHA1:/{print "FOPLAYER_UPLOAD_KEY_SHA1=" $2} /SHA256:/{print "FOPLAYER_UPLOAD_KEY_SHA256=" $2}'
           cat > android/key.properties <<EOF
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
