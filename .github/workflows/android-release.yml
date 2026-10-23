@@ -41,6 +41,35 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Install Android NDK with retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          NDK_VERSION="28.2.13676358"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          # Gradle otherwise downloads this NDK during the APK build. A truncated
+          # SDK archive can leave a partial install and fail the whole release.
+          for attempt in 1 2 3; do
+            if [ -d "$ANDROID_HOME/ndk/$NDK_VERSION" ] && [ -x "$ANDROID_HOME/ndk/$NDK_VERSION/ndk-build" ]; then
+              echo "Android NDK $NDK_VERSION is already installed."
+              exit 0
+            fi
+            rm -rf "$ANDROID_HOME/ndk/$NDK_VERSION"
+            echo "Installing Android NDK $NDK_VERSION (attempt $attempt/3)."
+            if "$SDKMANAGER" --install "ndk;$NDK_VERSION"; then
+              if [ -x "$ANDROID_HOME/ndk/$NDK_VERSION/ndk-build" ]; then
+                echo "Android NDK $NDK_VERSION installed successfully."
+                exit 0
+              fi
+              echo "NDK install command succeeded but the expected files are missing."
+            fi
+            rm -rf "$ANDROID_HOME/ndk/$NDK_VERSION"
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 10)); fi
+          done
+          echo "::error::Could not install Android NDK $NDK_VERSION after 3 attempts."
+          exit 1
+
       - name: Install Flutter dependencies
         run: flutter pub get
 
